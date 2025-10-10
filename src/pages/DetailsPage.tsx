@@ -101,14 +101,10 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
       setLoading(true);
       setError(null);
 
-      let metaData;
-      if (addonId) {
-        const data = await addonAPI.getMeta(addonId, contentType, contentId);
-        metaData = data.meta;
-      } else {
-        const data = await fetchMeta(contentType, contentId);
-        metaData = data.meta;
-      }
+      // Always use Cinemeta for metadata (like Stremio does)
+      // Addons are only used for streams, not metadata
+      const data = await fetchMeta(contentType, contentId);
+      const metaData = data.meta;
 
       setMeta(metaData);
 
