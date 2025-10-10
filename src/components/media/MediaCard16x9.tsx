@@ -30,29 +30,29 @@ export default function MediaCard16x9({ item, onClick, showTitle = false }: Medi
       >
         {!hasValidImage || imageError ? (
           <div className="fit-abs bg-gradient-to-br from-neutral-800 to-neutral-900 flex items-center justify-center">
-            <div className="text-white/40 text-center px-6">
-              <div className="text-sm font-medium">{item.title}</div>
-              {item.year && <div className="text-xs mt-1">{item.year}</div>}
+            <div className="text-white text-center px-6">
+              <div className="text-base font-bold">{item.title}</div>
+              {item.year && <div className="text-sm text-white/60 mt-1">{item.year}</div>}
             </div>
           </div>
         ) : (
-          <img
-            src={item.image16x9}
-            alt={item.title}
-            loading="lazy"
-            decoding="async"
-            className="fit-abs"
-            onError={() => setImageError(true)}
-          />
+          <>
+            <img
+              src={item.image16x9}
+              alt={item.title}
+              loading="lazy"
+              decoding="async"
+              className="fit-abs"
+              onError={() => setImageError(true)}
+            />
+            <div className="fit-abs bg-gradient-to-t from-black/90 via-transparent to-transparent pointer-events-none" />
+            <div className="absolute bottom-0 left-0 right-0 p-4 pointer-events-none">
+              <h3 className="text-white font-bold text-base line-clamp-2 drop-shadow-lg">
+                {item.title}
+              </h3>
+            </div>
+          </>
         )}
-
-        <div className="fit-abs bg-gradient-to-t from-black/90 via-transparent to-transparent pointer-events-none" />
-
-        <div className="absolute bottom-0 left-0 right-0 p-4 pointer-events-none">
-          <h3 className="text-white font-bold text-base line-clamp-2 drop-shadow-lg">
-            {item.title}
-          </h3>
-        </div>
       </div>
     </div>
   );
