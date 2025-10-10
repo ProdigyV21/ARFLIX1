@@ -101,11 +101,19 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
       setLoading(true);
       setError(null);
 
+      console.log('[DetailsPage] Loading meta for:', { contentType, contentId });
+
       // Always use Cinemeta for metadata (like Stremio does)
       // Addons are only used for streams, not metadata
       const data = await fetchMeta(contentType, contentId);
+      console.log('[DetailsPage] Fetched meta data:', data);
       const metaData = data.meta;
 
+      if (!metaData) {
+        throw new Error('No metadata returned');
+      }
+
+      console.log('[DetailsPage] Meta type:', metaData.type, 'ID:', metaData.id);
       setMeta(metaData);
 
       if ((metaData.type === 'series' || metaData.type === 'anime') && metaData.id) {
