@@ -80,12 +80,15 @@ export function HomePage({ onNavigate }: HomePageProps) {
       watching.map(async (item) => {
         // If already has image, return as-is
         if (item.backdrop || item.poster) {
+          console.log(`Item ${item.title} already has images:`, { backdrop: item.backdrop, poster: item.poster });
           return item;
         }
 
         // Fetch metadata to get images
         try {
+          console.log(`Fetching metadata for ${item.title} (${item.id})`);
           const meta = await catalogAPI.getMeta(item.type, item.id);
+          console.log(`Got meta for ${item.title}:`, { backdrop: meta.backdrop, background: meta.background, poster: meta.poster });
           return {
             ...item,
             backdrop: meta.backdrop || meta.background,
@@ -98,6 +101,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
       })
     );
 
+    console.log('Enriched continue watching:', enriched);
     return enriched;
   }
 
