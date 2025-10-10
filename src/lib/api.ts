@@ -126,34 +126,48 @@ export async function fetchStreams(type: string, id: string, season?: number, ep
   return data;
 }
 
-export async function fetchSeasons(tmdbId: string) {
-  const headers = await getAuthHeaders();
-  const res = await fetch(`${API_BASE}/catalog-seasons/${tmdbId}`, { headers });
-  if (!res.ok) throw new Error('Failed to fetch seasons');
-  return res.json();
+export async function fetchSeasons(imdbId: string) {
+  const { metadataProvider } = await import('./meta');
+  try {
+    const title = await metadataProvider.getTitle('series', imdbId);
+    return { seasons: title.seasons || [] };
+  } catch (error) {
+    console.error('[API] fetchSeasons error:', error);
+    return { seasons: [] };
+  }
 }
 
 export async function fetchEpisodes(id: string, season?: number) {
-  const headers = await getAuthHeaders();
-  const url = season !== undefined
-    ? `${API_BASE}/catalog-episodes/${id}?season=${season}`
-    : `${API_BASE}/catalog-episodes/${id}`;
-  const res = await fetch(url, { headers });
-  if (!res.ok) throw new Error('Failed to fetch episodes');
-  return res.json();
+  const { metadataProvider } = await import('./meta');
+  try {
+    if (season === undefined) {
+      return { episodes: [] };
+    }
+    const episodes = await metadataProvider.getSeasonEpisodes(id, season);
+    return { episodes };
+  } catch (error) {
+    console.error('[API] fetchEpisodes error:', error);
+    return { episodes: [] };
+  }
 }
 
 export async function searchContent(query: string) {
-  const headers = await getAuthHeaders();
-  const res = await fetch(`${API_BASE}/catalog-search?q=${encodeURIComponent(query)}`, { headers });
-  if (!res.ok) throw new Error('Failed to search');
-  return res.json();
+  const { catalogAPI } = await import('./catalog');
+  try {
+    return await catalogAPI.search(query);
+  } catch (error) {
+    console.error('[API] searchContent error:', error);
+    return { results: [] };
+  }
 }
 
 export async function fetchMeta(type: string, id: string) {
-  const headers = await getAuthHeaders();
-  const res = await fetch(`${API_BASE}/catalog-meta/${type}/${id}`, { headers });
-  if (!res.ok) throw new Error('Failed to fetch metadata');
-  return res.json();
+  const { catalogAPI } = await import('./catalog');
+  try {
+    return await catalogAPI.getMeta(id);
+  } catch (error) {
+    console.error('[API] fetchMeta error:', error);
+    throw error;
+  }
 }
 

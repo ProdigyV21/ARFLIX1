@@ -367,7 +367,19 @@ Deno.serve(async (req: Request) => {
     console.log(`[STREAMS] Request: type=${type}, id=${id}, season=${season}, episode=${episode}`);
     console.log(`[STREAMS] Found ${addons.length} enabled add-ons`);
 
-    const externalIds = await getExternalIds(type, id);
+    // Cinemeta provides IMDB IDs directly
+    let externalIds: ExternalIds = {};
+
+    if (id.startsWith('tt')) {
+      // Already an IMDB ID from Cinemeta
+      externalIds.imdbId = id;
+    } else if (id.startsWith('tmdb:')) {
+      // Fallback: try TMDB resolution
+      externalIds = await getExternalIds(type, id);
+    } else {
+      externalIds.imdbId = id;
+    }
+
     console.log("[STREAMS] External IDs:", JSON.stringify(externalIds));
 
     if (!externalIds.imdbId && !externalIds.tmdbMovieId && !externalIds.tmdbTvId && !externalIds.anilistId) {
@@ -376,7 +388,7 @@ Deno.serve(async (req: Request) => {
         JSON.stringify({
           items: [],
           best: null,
-          message: "Could not resolve content IDs. TMDB API might be unavailable."
+          message: "Could not resolve content IDs."
         } satisfies StreamsResponse),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );

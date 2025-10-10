@@ -1,4 +1,4 @@
-const API_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
+import { metadataProvider, type Title } from './meta';
 
 export type CatalogItem = {
   id: string;
@@ -10,7 +10,7 @@ export type CatalogItem = {
   backdrop?: string;
   rating?: number;
   popularity?: number;
-  source: 'tmdb' | 'anilist';
+  source: 'cinemeta';
   sourceRef: {
     tmdbId?: number;
     anilistId?: number;
@@ -43,22 +43,114 @@ export type MetaResponse = {
   };
 };
 
+function titleToCatalogItem(title: Title): CatalogItem {
+  return {
+    id: title.externalIds.imdb || title.id,
+    type: title.type === 'series' ? 'series' : 'movie',
+    title: title.title,
+    year: title.year,
+    overview: title.overview,
+    poster: title.posterUrl,
+    backdrop: title.backdropUrl,
+    rating: title.rating,
+    source: 'cinemeta',
+    sourceRef: {
+      imdbId: title.externalIds.imdb,
+      tmdbId: title.externalIds.tmdb ? parseInt(title.externalIds.tmdb) : undefined,
+    },
+  };
+}
+
 export const catalogAPI = {
   async getHome(): Promise<HomeResponse> {
-    const res = await fetch(`${API_BASE}/catalog-home`);
-    if (!res.ok) throw new Error('Failed to fetch home catalog');
-    return res.json();
+    try {
+      const [trendingMovies, topMovies, trendingSeries, topSeries] = await Promise.all([
+        metadataProvider.getCatalog('movie', 'top', { limit: 20 }),
+        metadataProvider.getCatalog('movie', 'top', { skip: 20, limit: 20 }),
+        metadataProvider.getCatalog('series', 'top', { limit: 20 }),
+        metadataProvider.getCatalog('series', 'top', { skip: 20, limit: 20 }),
+      ]);
+
+      const hero = trendingMovies.slice(0, 5).map(titleToCatalogItem);
+
+      const rows: HomeRow[] = [
+        {
+          id: 'trending-movies',
+          title: 'Trending Movies',
+          items: trendingMovies.map(titleToCatalogItem),
+        },
+        {
+          id: 'trending-series',
+          title: 'Trending TV Shows',
+          items: trendingSeries.map(titleToCatalogItem),
+        },
+        {
+          id: 'top-movies',
+          title: 'Popular Movies',
+          items: topMovies.map(titleToCatalogItem),
+        },
+        {
+          id: 'top-series',
+          title: 'Popular TV Shows',
+          items: topSeries.map(titleToCatalogItem),
+        },
+      ];
+
+      return {
+        hero,
+        rows,
+        usingLiveSources: true,
+      };
+    } catch (error) {
+      console.error('[Catalog] getHome error:', error);
+      return {
+        hero: [],
+        rows: [],
+        usingLiveSources: false,
+      };
+    }
   },
 
   async getMeta(id: string): Promise<MetaResponse> {
-    const res = await fetch(`${API_BASE}/catalog-meta/${id}`);
-    if (!res.ok) throw new Error('Failed to fetch meta');
-    return res.json();
+    try {
+      const type = id.startsWith('tt') ? 'movie' : 'movie';
+      const title = await metadataProvider.getTitle(type, id);
+
+      const item = titleToCatalogItem(title);
+
+      return {
+        meta: {
+          ...item,
+          runtime: title.runtime,
+          genres: title.genres,
+          imdbRating: title.rating?.toFixed(1),
+        },
+      };
+    } catch (error) {
+      console.error('[Catalog] getMeta error:', error);
+      throw error;
+    }
   },
 
   async search(query: string): Promise<{ results: CatalogItem[] }> {
-    const res = await fetch(`${API_BASE}/catalog-search?q=${encodeURIComponent(query)}`);
-    if (!res.ok) throw new Error('Failed to search');
-    return res.json();
+    try {
+      if (!query.trim()) {
+        return { results: [] };
+      }
+
+      const [movies, series] = await Promise.all([
+        metadataProvider.search('movie', query),
+        metadataProvider.search('series', query),
+      ]);
+
+      const results = [...movies, ...series]
+        .map(titleToCatalogItem)
+        .slice(0, 50);
+
+      return { results };
+    } catch (error) {
+      console.error('[Catalog] search error:', error);
+      return { results: [] };
+    }
   },
 };
