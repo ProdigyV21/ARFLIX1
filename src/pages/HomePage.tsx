@@ -21,6 +21,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
 
   const [rows, setRows] = useState<HomeRow[]>([]);
   const [continueWatching, setContinueWatching] = useState<WatchProgress[]>([]);
+  const [continueWatchingWithImages, setContinueWatchingWithImages] = useState<WatchProgress[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasAddons, setHasAddons] = useState(false);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
@@ -66,12 +67,43 @@ export function HomePage({ onNavigate }: HomePageProps) {
 
       setRows(catalogData.rows || []);
       setHasAddons(addonsData.addons?.filter((a: any) => a.enabled).length > 0);
-      setContinueWatching(getContinueWatching(20));
+
+      const watching = getContinueWatching(20);
+      setContinueWatching(watching);
+
+      // Fetch images for items without backdrop/poster
+      enrichContinueWatchingImages(watching);
     } catch (error) {
       console.error('Failed to load content:', error);
     } finally {
       setLoading(false);
     }
+  }
+
+  async function enrichContinueWatchingImages(watching: WatchProgress[]) {
+    const enriched = await Promise.all(
+      watching.map(async (item) => {
+        // If already has image, return as-is
+        if (item.backdrop || item.poster) {
+          return item;
+        }
+
+        // Fetch metadata to get images
+        try {
+          const meta = await catalogAPI.getMeta(item.type, item.id);
+          return {
+            ...item,
+            backdrop: meta.backdrop || meta.background,
+            poster: meta.poster
+          };
+        } catch (error) {
+          console.error(`Failed to fetch meta for ${item.id}:`, error);
+          return item;
+        }
+      })
+    );
+
+    setContinueWatchingWithImages(enriched);
   }
 
   function handleItemClick(item: CatalogItem) {
@@ -128,7 +160,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
         <section className="px-8 mb-6">
           <h2 className="text-3xl font-bold mb-6">Continue Watching</h2>
           <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
-            {continueWatching.map((item) => {
+            {(continueWatchingWithImages.length > 0 ? continueWatchingWithImages : continueWatching).map((item) => {
               return (
                 <div key={item.id} className="flex-shrink-0 w-[360px]">
                   <MediaCard16x9
