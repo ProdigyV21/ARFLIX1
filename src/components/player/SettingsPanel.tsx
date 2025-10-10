@@ -144,13 +144,39 @@ export function SettingsPanel({
                           stream.url === currentStream.url ? 'bg-white/10' : ''
                         }`}
                       >
-                        <div>
-                          <div className="font-medium">{stream.label}</div>
-                          {stream.sourceName && (
-                            <div className="text-xs text-gray-400 mt-1">{stream.sourceName}</div>
-                          )}
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium truncate">{stream.label}</div>
+
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {stream.quality && (
+                              <span className="text-xs px-2 py-0.5 rounded bg-neutral-700 text-gray-300">
+                                {stream.quality}p
+                              </span>
+                            )}
+                            {stream.codec && (
+                              <span className="text-xs px-2 py-0.5 rounded bg-neutral-700 text-gray-300">
+                                {stream.codec.toUpperCase()}
+                              </span>
+                            )}
+                            {(stream as any).audioCodec && (
+                              <span className="text-xs px-2 py-0.5 rounded bg-neutral-700 text-gray-300">
+                                {(stream as any).audioCodec}
+                              </span>
+                            )}
+                            {stream.hdr && stream.hdr !== 'none' && (
+                              <span className="text-xs px-2 py-0.5 rounded bg-purple-600/20 text-purple-400">
+                                {stream.hdr === 'dolby_vision' ? 'Dolby Vision' : 'HDR10'}
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-400">
+                            {stream.sourceName && <span>{stream.sourceName}</span>}
+                            {(stream as any).fileSize && <span>{(stream as any).fileSize}</span>}
+                            {(stream as any).seeds !== undefined && <span>👤 {(stream as any).seeds}</span>}
+                          </div>
                         </div>
-                        {stream.url === currentStream.url && <Check className="w-5 h-5" />}
+                        {stream.url === currentStream.url && <Check className="w-5 h-5 flex-shrink-0" />}
                       </button>
                     ))}
                   </div>

@@ -54,20 +54,30 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    const [source, type, sourceId] = id.split(':');
+    // Handle both IMDb IDs (tt123456) and structured IDs (tmdb:movie:123)
+    let imdbId: string | null = null;
 
-    if (source !== 'tmdb') {
-      return new Response(
-        JSON.stringify({ subtitles: [] }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (id.startsWith('tt')) {
+      // Direct IMDb ID
+      imdbId = id;
+      console.log('[subtitles] Using direct IMDb ID:', imdbId);
+    } else {
+      // Structured ID format
+      const [source, type, sourceId] = id.split(':');
+
+      if (source !== 'tmdb') {
+        return new Response(
+          JSON.stringify({ subtitles: [] }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const tmdbId = sourceId;
+      imdbId = await getTMDBImdbId(tmdbId, type);
     }
 
-    const tmdbId = sourceId;
-    const imdbId = await getTMDBImdbId(tmdbId, type);
-
     if (!imdbId) {
-      console.log('[subtitles] No IMDB ID found for TMDB:', tmdbId);
+      console.log('[subtitles] No IMDB ID found');
       return new Response(
         JSON.stringify({ subtitles: [] }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
