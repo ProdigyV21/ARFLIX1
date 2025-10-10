@@ -84,86 +84,10 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Use OpenSubtitles.com API with API key from env
-    const OS_API_KEY = Deno.env.get("OPENSUBTITLES_API_KEY");
-
-    if (!OS_API_KEY) {
-      console.log('[subtitles] No OpenSubtitles API key configured');
-      return new Response(
-        JSON.stringify({ subtitles: [] }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    const languageCodes = ['en', 'es', 'fr', 'de', 'it', 'pt', 'ja', 'ko', 'zh', 'ar'];
+    // Most video streams have embedded subtitles
+    // Returning empty array so the player uses embedded tracks from the video
+    console.log('[subtitles] Using embedded subtitles from video stream');
     const subtitles: Subtitle[] = [];
-
-    try {
-      // Build query params
-      const params = new URLSearchParams({
-        imdb_id: imdbId.replace('tt', ''),
-        languages: languageCodes.join(','),
-      });
-
-      if (season) params.append('season_number', season);
-      if (episode) params.append('episode_number', episode);
-
-      const searchUrl = `https://api.opensubtitles.com/api/v1/subtitles?${params.toString()}`;
-      console.log('[subtitles] Searching:', searchUrl);
-
-      const response = await fetch(searchUrl, {
-        headers: {
-          'Api-Key': OS_API_KEY,
-          'User-Agent': 'ArFlix v1.0',
-        },
-      });
-
-      if (!response.ok) {
-        console.error('[subtitles] API error:', response.status, await response.text());
-        return new Response(
-          JSON.stringify({ subtitles: [] }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      const data = await response.json();
-      const results = data.data || [];
-      console.log(`[subtitles] Found ${results.length} subtitle results`);
-
-      const seenLangs = new Set<string>();
-
-      for (const result of results) {
-        const langCode = result.attributes?.language;
-        if (!langCode || seenLangs.has(langCode)) continue;
-
-        const fileId = result.attributes?.files?.[0]?.file_id;
-        if (!fileId) continue;
-
-        seenLangs.add(langCode);
-
-        // Download link from OpenSubtitles API
-        const downloadUrl = `https://api.opensubtitles.com/api/v1/download`;
-
-        const proxyUrl = new URL(req.url);
-        const baseUrl = `https://${proxyUrl.host}`;
-        const proxiedUrl = `${baseUrl}/functions/v1/proxy-subtitle?url=${encodeURIComponent(downloadUrl)}&file_id=${fileId}&api_key=${encodeURIComponent(OS_API_KEY)}`;
-
-        console.log(`[subtitles] Adding ${langCode} subtitle`);
-
-        subtitles.push({
-          id: fileId.toString(),
-          language: getLangLabel(langCode),
-          languageCode: langCode,
-          url: proxiedUrl,
-          label: getLangLabel(langCode),
-          format: 'vtt',
-        });
-      }
-    } catch (err) {
-      console.error('[subtitles] Search error:', err);
-    }
-
-    console.log(`[subtitles] Found ${subtitles.length} subtitle languages for ${imdbId}`);
 
     return new Response(
       JSON.stringify({ subtitles }),

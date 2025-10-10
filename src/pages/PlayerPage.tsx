@@ -124,6 +124,65 @@ export function PlayerPage({
     }
   }
 
+  function detectEmbeddedSubtitles() {
+    const video = videoRef.current;
+    if (!video) return;
+
+    console.log('[PlayerPage] === CHECKING FOR EMBEDDED SUBTITLES ===');
+
+    // HLS.js provides text tracks
+    if (mediaEngineRef.current && (mediaEngineRef.current as any).textTracks) {
+      const hlsTracks = (mediaEngineRef.current as any).textTracks;
+      console.log('[PlayerPage] HLS.js text tracks:', hlsTracks.length);
+    }
+
+    // Check video element text tracks (embedded in video file or from HLS manifest)
+    setTimeout(() => {
+      const tracks = video.textTracks;
+      console.log('[PlayerPage] Video element has', tracks.length, 'embedded text tracks');
+
+      const embeddedSubs: typeof availableSubtitles = [];
+
+      for (let i = 0; i < tracks.length; i++) {
+        const track = tracks[i];
+        console.log(`[PlayerPage] Embedded track ${i}:`, {
+          kind: track.kind,
+          label: track.label,
+          language: track.language,
+          mode: track.mode
+        });
+
+        // Add to available subtitles if it's a subtitle/caption track
+        if (track.kind === 'subtitles' || track.kind === 'captions') {
+          const langCode = track.language || 'unknown';
+          embeddedSubs.push({
+            id: `embedded-${i}`,
+            language: track.label || langCode,
+            languageCode: langCode,
+            url: '', // Embedded, no URL needed
+            label: track.label || langCode.toUpperCase(),
+            format: 'embedded'
+          });
+        }
+      }
+
+      if (embeddedSubs.length > 0) {
+        console.log('[PlayerPage] Found', embeddedSubs.length, 'embedded subtitle tracks');
+        // Merge with fetched subtitles, preferring embedded
+        setAvailableSubtitles(prev => {
+          const combined = [...embeddedSubs];
+          // Add fetched subs that aren't already in embedded
+          prev.forEach(sub => {
+            if (!embeddedSubs.find(e => e.languageCode === sub.languageCode)) {
+              combined.push(sub);
+            }
+          });
+          return combined;
+        });
+      }
+    }, 1000);
+  }
+
   function addSubtitleTracks() {
     const video = videoRef.current;
     if (!video || availableSubtitles.length === 0) return;
@@ -132,17 +191,18 @@ export function PlayerPage({
     console.log('[PlayerPage] Adding', availableSubtitles.length, 'subtitle tracks');
     console.log('[PlayerPage] ALL subtitle URLs BEFORE conversion:', availableSubtitles.map(s => ({ lang: s.languageCode, url: s.url })));
 
-    while (video.textTracks.length > 0) {
-      const track = video.textTracks[0];
-      const trackElement = Array.from(video.querySelectorAll('track')).find(
-        el => el.track === track
-      );
-      if (trackElement) {
-        video.removeChild(trackElement);
+    // Remove only non-embedded tracks
+    const trackElements = Array.from(video.querySelectorAll('track'));
+    trackElements.forEach(trackEl => {
+      if (trackEl.getAttribute('src')) { // Only remove tracks with external src
+        video.removeChild(trackEl);
       }
-    }
+    });
 
+    // Add external subtitle tracks (skip embedded ones)
     availableSubtitles.forEach((sub) => {
+      if (sub.format === 'embedded') return; // Skip embedded, they're already in the video
+
       const track = document.createElement('track');
       track.kind = 'subtitles';
       track.label = sub.label;
@@ -347,6 +407,9 @@ export function PlayerPage({
         // Check video source
         console.log('[PlayerPage] Current src:', video.currentSrc ? video.currentSrc.substring(0, 150) : 'none');
         console.log('[PlayerPage] Network state:', video.networkState, 'Ready state:', video.readyState);
+
+        // Check for embedded text tracks
+        detectEmbeddedSubtitles();
 
         addSubtitleTracks();
       });
