@@ -84,10 +84,56 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    // Most video streams have embedded subtitles
-    // Returning empty array so the player uses embedded tracks from the video
-    console.log('[subtitles] Using embedded subtitles from video stream');
+    console.log('[subtitles] Fetching from OpenSubtitles for IMDb ID:', imdbId);
+
     const subtitles: Subtitle[] = [];
+
+    try {
+      const osUrl = season && episode
+        ? `https://rest.opensubtitles.org/search/episode-${episode}/imdbid-${imdbId.replace('tt', '')}/season-${season}/sublanguageid-all`
+        : `https://rest.opensubtitles.org/search/imdbid-${imdbId.replace('tt', '')}/sublanguageid-all`;
+
+      console.log('[subtitles] OpenSubtitles URL:', osUrl);
+
+      const osResponse = await fetch(osUrl, {
+        headers: {
+          'User-Agent': 'Arflix v1.0'
+        }
+      });
+
+      if (osResponse.ok) {
+        const osData = await osResponse.json();
+        console.log('[subtitles] OpenSubtitles returned', osData?.length || 0, 'results');
+
+        if (Array.isArray(osData) && osData.length > 0) {
+          const seen = new Set<string>();
+
+          for (const sub of osData) {
+            const langCode = getLangCode(sub.SubLanguageID || sub.ISO639 || '');
+            const key = `${langCode}-${sub.SubFormat}`;
+
+            if (!seen.has(key) && sub.SubDownloadLink) {
+              seen.add(key);
+
+              subtitles.push({
+                id: sub.IDSubtitleFile || sub.IDSubtitle,
+                language: getLangLabel(langCode),
+                languageCode: langCode,
+                url: sub.SubDownloadLink,
+                label: `${getLangLabel(langCode)} (${sub.SubFormat || 'srt'})`,
+                format: sub.SubFormat || 'srt'
+              });
+
+              if (subtitles.length >= 10) break;
+            }
+          }
+        }
+      }
+    } catch (osError) {
+      console.error('[subtitles] OpenSubtitles fetch failed:', osError);
+    }
+
+    console.log('[subtitles] Returning', subtitles.length, 'subtitles');
 
     return new Response(
       JSON.stringify({ subtitles }),
