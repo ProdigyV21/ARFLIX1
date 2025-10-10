@@ -164,7 +164,7 @@ export async function searchContent(query: string) {
 export async function fetchMeta(type: string, id: string) {
   const { catalogAPI } = await import('./catalog');
   try {
-    return await catalogAPI.getMeta(id);
+    return await catalogAPI.getMeta(id, type as 'movie' | 'series');
   } catch (error) {
     console.error('[API] fetchMeta error:', error);
     throw error;
