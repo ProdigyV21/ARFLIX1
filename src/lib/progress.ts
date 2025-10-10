@@ -13,7 +13,18 @@ export type WatchProgress = {
 
 const PROGRESS_KEY = 'arflix_watch_progress';
 
-export function saveProgress(progress: WatchProgress): void {
+import { supabase } from './supabase';
+
+/**
+ * Persist watch progress both locally and remotely.  The progress is stored
+ * in localStorage to enable instant resume while offline.  A copy is also
+ * pushed to the Supabase `watch_history` table so that users can resume
+ * watching on other devices.  Errors during the remote save are logged
+ * quietly and do not interrupt local updates.
+ *
+ * @param progress The watch progress to save.
+ */
+export async function saveProgress(progress: WatchProgress): Promise<void> {
   const all = getAllProgress();
   const index = all.findIndex(p => p.id === progress.id);
 
@@ -27,7 +38,34 @@ export function saveProgress(progress: WatchProgress): void {
     all.splice(100);
   }
 
+  // Persist locally for offline resume
   localStorage.setItem(PROGRESS_KEY, JSON.stringify(all));
+
+  // Persist remotely for cross‑device resume
+  try {
+    const payload = {
+      content_id: progress.id,
+      content_type: progress.type === 'anime' ? 'series' : progress.type,
+      title: progress.title,
+      poster: progress.poster ?? null,
+      season: progress.seasonNumber,
+      episode: progress.episodeNumber,
+      position: progress.currentTime,
+      duration: progress.duration,
+      last_watched: new Date(progress.updatedAt).toISOString(),
+    };
+
+    // Use upsert to either insert a new record or update the existing one.
+    const { error } = await supabase
+      .from('watch_history')
+      .upsert(payload, { onConflict: 'content_id' });
+
+    if (error) {
+      console.error('Failed to upsert watch history:', error);
+    }
+  } catch (err) {
+    console.error('Unexpected error saving watch history:', err);
+  }
 }
 
 export function getProgress(id: string): WatchProgress | null {
