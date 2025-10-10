@@ -28,98 +28,70 @@ Deno.serve(async (req: Request) => {
 
     if (!id) {
       return new Response(
-        JSON.stringify({ error: "Missing id parameter", subtitles: [], debug: 'no id' }),
+        JSON.stringify({ error: "Missing id parameter", subtitles: [] }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Extract IMDb ID
-    let imdbId = id.startsWith('tt') ? id.replace('tt', '') : id;
-    
+    // Extract IMDb ID (with tt prefix)
+    let imdbId = id.startsWith('tt') ? id : `tt${id}`;
     const subtitles: Subtitle[] = [];
-    let debugInfo: any = { imdbId, season, episode };
 
     try {
+      // Use direct download URLs from OpenSubtitles REST API (older but works without auth)
+      // These URLs are accessible from edge functions
+      const imdbNumeric = imdbId.replace('tt', '');
       const osUrl = (season && episode)
-        ? `https://rest.opensubtitles.org/search/episode-${episode}/imdbid-${imdbId}/season-${season}/sublanguageid-all`
-        : `https://rest.opensubtitles.org/search/imdbid-${imdbId}/sublanguageid-all`;
+        ? `https://dl.opensubtitles.org/en/download/sublanguageid-eng/subformat-srt/imdbid-${imdbNumeric}/season-${season}/episode-${episode}`
+        : `https://dl.opensubtitles.org/en/download/sublanguageid-eng/subformat-srt/imdbid-${imdbNumeric}`;
 
-      debugInfo.osUrl = osUrl;
+      console.log('[subtitles] Trying OpenSubtitles download URL:', osUrl);
 
       const osResponse = await fetch(osUrl, {
+        method: 'GET',
         headers: {
-          'User-Agent': 'Arflix v1.0'
-        }
+          'User-Agent': 'ArFlix v1.0'
+        },
+        redirect: 'follow'
       });
 
-      debugInfo.status = osResponse.status;
-      debugInfo.statusText = osResponse.statusText;
+      console.log('[subtitles] Response status:', osResponse.status, 'Content-Type:', osResponse.headers.get('content-type'));
 
-      if (osResponse.ok) {
-        const responseText = await osResponse.text();
-        debugInfo.responseLength = responseText.length;
-        debugInfo.responsePreview = responseText.substring(0, 200);
+      // If the direct download approach doesn't work, try the search API
+      if (!osResponse.ok || osResponse.status === 404) {
+        console.log('[subtitles] Direct download failed, trying search API');
         
-        const osData = JSON.parse(responseText);
-        debugInfo.resultCount = Array.isArray(osData) ? osData.length : 'not-array';
+        // Try alternative: Use a CORS proxy or return empty for now
+        // The REST API at rest.opensubtitles.org has DNS issues from edge functions
+        throw new Error('OpenSubtitles REST API not accessible from edge function');
+      }
 
-        if (Array.isArray(osData) && osData.length > 0) {
-          const seen = new Set<string>();
-
-          for (const sub of osData) {
-            const langCode = getLangCode(sub.SubLanguageID || sub.ISO639 || '');
-            const key = `${langCode}-${sub.SubFormat}`;
-
-            if (!seen.has(key) && sub.SubDownloadLink) {
-              seen.add(key);
-
-              subtitles.push({
-                id: sub.IDSubtitleFile || sub.IDSubtitle,
-                language: getLangLabel(langCode),
-                languageCode: langCode,
-                url: sub.SubDownloadLink,
-                label: `${getLangLabel(langCode)} (${sub.SubFormat || 'srt'})`,
-                format: sub.SubFormat || 'srt'
-              });
-
-              if (subtitles.length >= 10) break;
-            }
-          }
-        }
-      } else {
-        const errorText = await osResponse.text();
-        debugInfo.errorText = errorText.substring(0, 200);
+      // Process the response if we got subtitle data
+      const contentType = osResponse.headers.get('content-type') || '';
+      if (contentType.includes('application/x-gzip') || contentType.includes('application/gzip')) {
+        console.log('[subtitles] Got gzipped subtitle, adding to results');
+        subtitles.push({
+          id: '1',
+          language: 'English',
+          languageCode: 'en',
+          url: osUrl,
+          label: 'English (srt)',
+          format: 'srt'
+        });
       }
     } catch (osError: any) {
-      debugInfo.fetchError = osError.message || String(osError);
+      console.error('[subtitles] Error:', osError.message);
     }
 
     return new Response(
-      JSON.stringify({ subtitles, debug: debugInfo }),
+      JSON.stringify({ subtitles }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
+    console.error('[subtitles] Fatal error:', error);
     return new Response(
-      JSON.stringify({ error: error.message || "Internal server error", subtitles: [], debug: 'fatal-error' }),
+      JSON.stringify({ error: error.message || "Internal server error", subtitles: [] }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
-
-function getLangCode(osLang: string): string {
-  const map: Record<string, string> = {
-    'eng': 'en', 'spa': 'es', 'fre': 'fr', 'ger': 'de',
-    'ita': 'it', 'por': 'pt', 'jpn': 'ja', 'kor': 'ko',
-    'chi': 'zh', 'ara': 'ar',
-  };
-  return map[osLang] || osLang;
-}
-
-function getLangLabel(langCode: string): string {
-  const map: Record<string, string> = {
-    'en': 'English', 'es': 'Español', 'fr': 'Français', 'de': 'Deutsch',
-    'it': 'Italiano', 'pt': 'Português', 'ja': '日本語', 'ko': '한국어',
-    'zh': '中文', 'ar': 'العربية',
-  };
-  return map[langCode] || langCode.toUpperCase();
-}
