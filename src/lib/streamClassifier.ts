@@ -325,8 +325,14 @@ export function selectPlayableSource(
 
   // Prioritize HLS streams (they often have subtitle tracks)
   const hlsStreams = playable.filter(s =>
-    s.classification.container === 'hls' || s.url.includes('.m3u8')
+    s.classification.container === 'm3u8' || s.url.includes('.m3u8')
   );
+
+  console.log('[StreamClassifier] HLS streams found:', hlsStreams.length);
+  console.log('[StreamClassifier] Sample containers:', playable.slice(0, 5).map(s => ({
+    container: s.classification.container,
+    url: s.url.substring(0, 100)
+  })));
 
   // Prioritize browser-compatible audio
   const withGoodAudio = playable.filter(s =>
@@ -341,12 +347,16 @@ export function selectPlayableSource(
   );
 
   if (hlsWithGoodAudio.length > 0) {
+    console.log('[StreamClassifier] Using HLS with good audio');
     candidates = hlsWithGoodAudio;
   } else if (hlsStreams.length > 0) {
+    console.log('[StreamClassifier] Using HLS (any audio)');
     candidates = hlsStreams;
   } else if (withGoodAudio.length > 0) {
+    console.log('[StreamClassifier] Using good audio (no HLS available)');
     candidates = withGoodAudio;
   } else {
+    console.log('[StreamClassifier] Using any playable (fallback)');
     candidates = playable;
   }
 
