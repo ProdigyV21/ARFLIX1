@@ -113,18 +113,22 @@ export const catalogAPI = {
 
   async getMeta(id: string, type?: 'movie' | 'series'): Promise<MetaResponse> {
     try {
+      console.log('[Catalog] getMeta called with:', { id, type });
       const title = await metadataProvider.getTitle(type, id);
+      console.log('[Catalog] Metadata provider returned title.type:', title.type);
       const item = titleToCatalogItem(title);
+      console.log('[Catalog] titleToCatalogItem returned item.type:', item.type);
 
-      return {
-        meta: {
-          ...item,
-          type: title.type === 'series' ? 'series' : 'movie',
-          runtime: title.runtime,
-          genres: title.genres,
-          imdbRating: title.rating?.toFixed(1),
-        },
+      const meta = {
+        ...item,
+        type: title.type === 'series' ? 'series' : 'movie',
+        runtime: title.runtime,
+        genres: title.genres,
+        imdbRating: title.rating?.toFixed(1),
       };
+      console.log('[Catalog] Final meta.type:', meta.type);
+
+      return { meta };
     } catch (error) {
       console.error('[Catalog] getMeta error:', error);
       throw error;

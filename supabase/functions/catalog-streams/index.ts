@@ -128,6 +128,7 @@ function detectStreamKind(url: string): StreamKind {
   if (lower.includes(".m3u8") || lower.includes("m3u8") || lower.includes("/playback/")) return "hls";
   if (lower.includes(".mpd") || lower.includes("dash")) return "dash";
   if (lower.includes(".mp4") || lower.includes(".mkv")) return "mp4";
+  console.log(`[detectStreamKind] Unknown kind for URL: ${url.substring(url.length - 50)}`);
   return "unknown";
 }
 
@@ -216,6 +217,7 @@ async function fetchStreamsFromAddon(
         }
 
         const kind = detectStreamKind(stream.url);
+        console.log(`[STREAMS] Stream URL: ${stream.url.substring(stream.url.length - 80)} => kind: ${kind}`);
         const quality = parseQuality(stream.name || stream.title || "", stream.url);
         const codec = parseCodec(stream.name || stream.title || "");
         const hdr = parseHDR(stream.name || stream.title || "");
