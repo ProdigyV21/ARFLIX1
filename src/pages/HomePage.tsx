@@ -21,7 +21,6 @@ export function HomePage({ onNavigate }: HomePageProps) {
 
   const [rows, setRows] = useState<HomeRow[]>([]);
   const [continueWatching, setContinueWatching] = useState<WatchProgress[]>([]);
-  const [continueWatchingWithImages, setContinueWatchingWithImages] = useState<WatchProgress[]>([]);
   const [loading, setLoading] = useState(true);
   const [hasAddons, setHasAddons] = useState(false);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
@@ -60,19 +59,15 @@ export function HomePage({ onNavigate }: HomePageProps) {
     try {
       setLoading(true);
 
-      const [catalogData, addonsData] = await Promise.all([
+      const [catalogData, addonsData, enrichedWatching] = await Promise.all([
         catalogAPI.getHome(),
         addonAPI.list().catch(() => ({ addons: [] })),
+        enrichContinueWatchingImages(getContinueWatching(20)),
       ]);
 
       setRows(catalogData.rows || []);
       setHasAddons(addonsData.addons?.filter((a: any) => a.enabled).length > 0);
-
-      const watching = getContinueWatching(20);
-      setContinueWatching(watching);
-
-      // Fetch images for items without backdrop/poster
-      enrichContinueWatchingImages(watching);
+      setContinueWatching(enrichedWatching);
     } catch (error) {
       console.error('Failed to load content:', error);
     } finally {
@@ -80,7 +75,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
     }
   }
 
-  async function enrichContinueWatchingImages(watching: WatchProgress[]) {
+  async function enrichContinueWatchingImages(watching: WatchProgress[]): Promise<WatchProgress[]> {
     const enriched = await Promise.all(
       watching.map(async (item) => {
         // If already has image, return as-is
@@ -103,7 +98,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
       })
     );
 
-    setContinueWatchingWithImages(enriched);
+    return enriched;
   }
 
   function handleItemClick(item: CatalogItem) {
@@ -160,7 +155,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
         <section className="px-8 mb-6">
           <h2 className="text-3xl font-bold mb-6">Continue Watching</h2>
           <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
-            {(continueWatchingWithImages.length > 0 ? continueWatchingWithImages : continueWatching).map((item) => {
+            {continueWatching.map((item) => {
               return (
                 <div key={item.id} className="flex-shrink-0 w-[360px]">
                   <MediaCard16x9
