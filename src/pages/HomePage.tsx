@@ -76,47 +76,65 @@ export function HomePage({ onNavigate }: HomePageProps) {
   }
 
   async function enrichContinueWatchingImages(watching: WatchProgress[]): Promise<WatchProgress[]> {
+    const BASE_URL = 'https://v3-cinemeta.strem.io';
+
     const enriched = await Promise.all(
       watching.map(async (item) => {
         try {
           const type: 'movie' | 'series' = item.type === 'anime' ? 'series' : item.type;
 
-          let resolvedId = item.id;
-          let needsIdUpdate = false;
+          const query = encodeURIComponent(item.title);
+          const searchUrl = `${BASE_URL}/catalog/${type}/top/search.json?search=${query}`;
 
-          if (item.id.toLowerCase().startsWith('tmdb:')) {
-            try {
-              console.log(`[CW] Resolving TMDB ID for "${item.title}" (${item.id})`);
-              const resolved = await catalogAPI.resolveTitleToId({
-                type,
-                title: item.title,
-              });
-              resolvedId = resolved.id;
-              needsIdUpdate = true;
-              console.log(`[CW] Resolved to IMDb ID: ${resolvedId}`);
-            } catch (resolveError) {
-              console.error(`[CW] Failed to resolve TMDB ID for ${item.title}:`, resolveError);
-              return item;
-            }
+          console.log(`[CW] Searching Cinemeta for "${item.title}"`);
+          const searchRes = await fetch(searchUrl);
+
+          if (!searchRes.ok) {
+            console.error(`[CW] Search failed for "${item.title}"`);
+            return item;
           }
 
-          const meta = await catalogAPI.getMeta(resolvedId, type);
-          console.log(`[CW] Got meta for "${item.title}":`, { backdrop: meta.meta.backdrop, poster: meta.meta.poster });
+          const searchData = await searchRes.json();
+          const metas = searchData.metas || [];
 
-          const enrichedItem = {
+          if (metas.length === 0) {
+            console.error(`[CW] No results found for "${item.title}"`);
+            return item;
+          }
+
+          const match = metas[0];
+          const cinemetaId = match.id;
+
+          console.log(`[CW] Found match for "${item.title}": ${cinemetaId}`);
+
+          const metaUrl = `${BASE_URL}/meta/${type}/${encodeURIComponent(cinemetaId)}.json`;
+          const metaRes = await fetch(metaUrl);
+
+          if (!metaRes.ok) {
+            console.error(`[CW] Failed to fetch meta for ${cinemetaId}`);
+            return item;
+          }
+
+          const metaData = await metaRes.json();
+          const meta = metaData.meta;
+
+          console.log(`[CW] Got meta for "${item.title}":`, {
+            backdrop: meta.background,
+            poster: meta.poster
+          });
+
+          const enrichedItem: WatchProgress = {
             ...item,
-            id: resolvedId,
-            backdrop: meta.meta.backdrop || item.backdrop,
-            poster: meta.meta.poster || item.poster
+            id: cinemetaId,
+            backdrop: meta.background || item.backdrop,
+            poster: meta.poster || item.poster
           };
 
-          if (needsIdUpdate) {
-            saveProgress(enrichedItem);
-          }
+          saveProgress(enrichedItem);
 
           return enrichedItem;
         } catch (error) {
-          console.error(`[CW] Failed to fetch meta for ${item.id}:`, error);
+          console.error(`[CW] Failed to enrich "${item.title}":`, error);
           return item;
         }
       })
