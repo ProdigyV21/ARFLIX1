@@ -309,6 +309,7 @@ export function selectPlayableSource(
 
   // Filter out trailers/samples (streams with "trailer", "sample", "preview" in title)
   const filtered = playable.filter(s => {
+    if (!s.title) return true;
     const lower = s.title.toLowerCase();
     return !lower.includes('trailer') && !lower.includes('sample') && !lower.includes('preview');
   });
