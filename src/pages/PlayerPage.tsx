@@ -19,6 +19,7 @@ type PlayerPageProps = {
   addonId?: string;
   title: string;
   poster?: string;
+  backdrop?: string;
   seasonNumber?: number;
   episodeNumber?: number;
   onBack: () => void;
@@ -29,6 +30,7 @@ export function PlayerPage({
   contentType,
   title,
   poster,
+  backdrop,
   seasonNumber,
   episodeNumber,
   onBack,
@@ -477,6 +479,7 @@ export function PlayerPage({
           type: contentType,
           title,
           poster,
+          backdrop,
           currentTime: videoRef.current?.currentTime || 0,
           duration,
           updatedAt: Date.now(),
@@ -492,7 +495,7 @@ export function PlayerPage({
         clearInterval(progressIntervalRef.current);
       }
     };
-  }, [contentId, contentType, title, poster, duration, currentTime, seasonNumber, episodeNumber]);
+  }, [contentId, contentType, title, poster, backdrop, duration, currentTime, seasonNumber, episodeNumber]);
 
   const resetHideControlsTimer = useCallback(() => {
     if (hideControlsTimeoutRef.current) {

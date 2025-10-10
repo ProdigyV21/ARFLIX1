@@ -191,7 +191,28 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
   async function handlePlay(season?: number, episode?: number) {
     if (!meta) return;
     const title = meta.title || meta.name;
-    onNavigate('player', { id: meta.id, type: meta.type, addonId, title, season, episode });
+
+    // For series, get the episode backdrop/still
+    let backdrop = meta.backdrop || meta.background;
+    if ((meta.type === 'series' || meta.type === 'anime') && season && episode) {
+      const episodeData = episodes.find(e =>
+        (e.episodeNumber || e.number) === episode
+      );
+      if (episodeData?.still) {
+        backdrop = episodeData.still;
+      }
+    }
+
+    onNavigate('player', {
+      id: meta.id,
+      type: meta.type,
+      addonId,
+      title,
+      season,
+      episode,
+      poster: meta.poster,
+      backdrop,
+    });
   }
 
   function handleTrailer() {

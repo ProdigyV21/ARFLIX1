@@ -129,9 +129,9 @@ export function HomePage({ onNavigate }: HomePageProps) {
           <h2 className="text-3xl font-bold mb-6">Continue Watching</h2>
           <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
             {continueWatching.map((item) => {
-              // Get backdrop from catalog if available
+              // Prefer backdrop from watch progress (episode still), then catalog item
               const catalogItem = rows.flatMap(r => r.items).find((i: CatalogItem) => i.id === item.id);
-              const image = catalogItem?.backdrop || catalogItem?.poster || item.poster || '';
+              const image = item.backdrop || catalogItem?.backdrop || catalogItem?.poster || item.poster || '';
 
               return (
                 <div key={item.id} className="flex-shrink-0 w-[360px]">

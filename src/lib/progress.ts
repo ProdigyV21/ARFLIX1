@@ -3,6 +3,7 @@ export type WatchProgress = {
   type: 'movie' | 'series' | 'anime';
   title: string;
   poster?: string;
+  backdrop?: string;
   currentTime: number;
   duration: number;
   updatedAt: number;

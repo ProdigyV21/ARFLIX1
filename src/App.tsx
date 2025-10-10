@@ -109,6 +109,8 @@ function App() {
             contentType={currentPage.data?.type}
             addonId={currentPage.data?.addonId}
             title={currentPage.data?.title || 'Playing'}
+            poster={currentPage.data?.poster}
+            backdrop={currentPage.data?.backdrop}
             seasonNumber={currentPage.data?.season}
             episodeNumber={currentPage.data?.episode}
             onBack={goBack}
