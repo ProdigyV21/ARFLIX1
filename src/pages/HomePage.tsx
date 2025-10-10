@@ -5,7 +5,7 @@ import MediaCard16x9 from '../components/media/MediaCard16x9';
 import { useFocusManager, useFocusable } from '../lib/focus';
 import { catalogAPI, type CatalogItem, type HomeRow } from '../lib/catalog';
 import { addonAPI } from '../lib/api';
-import { getContinueWatching, type WatchProgress } from '../lib/progress';
+import { getContinueWatching, saveProgress, type WatchProgress } from '../lib/progress';
 import type { HeroItem } from '../lib/tmdb';
 import { tmdbBackdrop } from '../lib/tmdbImages';
 
@@ -78,37 +78,45 @@ export function HomePage({ onNavigate }: HomePageProps) {
   async function enrichContinueWatchingImages(watching: WatchProgress[]): Promise<WatchProgress[]> {
     const enriched = await Promise.all(
       watching.map(async (item) => {
-        if (item.backdrop || item.poster) {
-          return item;
-        }
-
         try {
           const type: 'movie' | 'series' = item.type === 'anime' ? 'series' : item.type;
 
           let resolvedId = item.id;
+          let needsIdUpdate = false;
 
           if (item.id.toLowerCase().startsWith('tmdb:')) {
             try {
+              console.log(`[CW] Resolving TMDB ID for "${item.title}" (${item.id})`);
               const resolved = await catalogAPI.resolveTitleToId({
                 type,
                 title: item.title,
               });
               resolvedId = resolved.id;
+              needsIdUpdate = true;
+              console.log(`[CW] Resolved to IMDb ID: ${resolvedId}`);
             } catch (resolveError) {
-              console.error(`Failed to resolve TMDB ID for ${item.title}:`, resolveError);
+              console.error(`[CW] Failed to resolve TMDB ID for ${item.title}:`, resolveError);
               return item;
             }
           }
 
           const meta = await catalogAPI.getMeta(resolvedId, type);
-          return {
+          console.log(`[CW] Got meta for "${item.title}":`, { backdrop: meta.meta.backdrop, poster: meta.meta.poster });
+
+          const enrichedItem = {
             ...item,
             id: resolvedId,
-            backdrop: meta.meta.backdrop,
-            poster: meta.meta.poster
+            backdrop: meta.meta.backdrop || item.backdrop,
+            poster: meta.meta.poster || item.poster
           };
+
+          if (needsIdUpdate) {
+            saveProgress(enrichedItem);
+          }
+
+          return enrichedItem;
         } catch (error) {
-          console.error(`Failed to fetch meta for ${item.id}:`, error);
+          console.error(`[CW] Failed to fetch meta for ${item.id}:`, error);
           return item;
         }
       })
