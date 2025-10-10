@@ -55,6 +55,9 @@ export function getContinueWatching(limit: number = 20): WatchProgress[] {
   const all = getAllProgress();
   return all
     .filter(p => {
+      // Filter out entries without images
+      if (!p.poster && !p.backdrop) return false;
+
       const progress = p.currentTime / p.duration;
       return progress >= 0.05 && progress < 0.95 && p.currentTime >= 90;
     })
