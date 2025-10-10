@@ -198,8 +198,8 @@ function calculateCompatibilityScore(
     '480p': 480
   }[classification.resolution || ''] || 1080;
 
-  // Always add resolution score - no caps
-  score += resolutionValue / 10;
+  // Multiply by 5 to make resolution differences more significant
+  score += (resolutionValue / 10) * 5;
 
   return score;
 }

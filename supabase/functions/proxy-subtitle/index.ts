@@ -37,12 +37,50 @@ Deno.serve(async (req: Request) => {
   try {
     const url = new URL(req.url);
     let subtitleUrl = url.searchParams.get("url");
+    const fileId = url.searchParams.get("file_id");
+    const apiKey = url.searchParams.get("api_key");
 
     if (!subtitleUrl) {
       return new Response(
         JSON.stringify({ error: "Missing url parameter" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
+    }
+
+    // Handle OpenSubtitles API download
+    if (subtitleUrl.includes('opensubtitles.com') && fileId && apiKey) {
+      console.log('[proxy-subtitle] Downloading from OpenSubtitles API, file_id:', fileId);
+
+      const downloadResponse = await fetch(subtitleUrl, {
+        method: 'POST',
+        headers: {
+          'Api-Key': apiKey,
+          'Content-Type': 'application/json',
+          'User-Agent': 'ArFlix/1.0',
+        },
+        body: JSON.stringify({ file_id: parseInt(fileId) }),
+      });
+
+      if (!downloadResponse.ok) {
+        console.error('[proxy-subtitle] OpenSubtitles download failed:', downloadResponse.status);
+        return new Response(
+          JSON.stringify({ error: `OpenSubtitles download failed: ${downloadResponse.status}` }),
+          { status: downloadResponse.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const downloadData = await downloadResponse.json();
+      const downloadLink = downloadData.link;
+
+      if (!downloadLink) {
+        return new Response(
+          JSON.stringify({ error: "No download link returned" }),
+          { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      console.log('[proxy-subtitle] Got download link:', downloadLink);
+      subtitleUrl = downloadLink;
     }
 
     // Force HTTPS for all subtitle URLs
