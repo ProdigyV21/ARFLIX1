@@ -102,10 +102,24 @@ export function HomePage({ onNavigate }: HomePageProps) {
             return item;
           }
 
-          const match = metas[0];
+          const normalizeTitle = (title: string) =>
+            title.toLowerCase().replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
+
+          const searchTerm = normalizeTitle(item.title);
+
+          let match = metas.find((m: any) => {
+            const metaTitle = normalizeTitle(m.name || '');
+            return metaTitle === searchTerm || metaTitle.includes(searchTerm) || searchTerm.includes(metaTitle);
+          });
+
+          if (!match) {
+            match = metas[0];
+            console.warn(`[CW] No exact match for "${item.title}", using first result: ${match.name}`);
+          }
+
           const cinemetaId = match.id;
 
-          console.log(`[CW] Found match for "${item.title}": ${cinemetaId}`);
+          console.log(`[CW] Found match for "${item.title}": ${cinemetaId} (${match.name})`);
 
           const metaUrl = `${BASE_URL}/meta/${type}/${encodeURIComponent(cinemetaId)}.json`;
           const metaRes = await fetch(metaUrl);
