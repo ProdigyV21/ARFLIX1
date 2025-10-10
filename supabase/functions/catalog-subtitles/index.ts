@@ -84,12 +84,12 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log('[subtitles] Fetching from OpenSubtitles for IMDb ID:', imdbId);
+    console.log('[subtitles] Fetching from OpenSubtitles for IMDb ID:', imdbId, 'season:', season, 'episode:', episode);
 
     const subtitles: Subtitle[] = [];
 
     try {
-      const osUrl = season && episode
+      const osUrl = (season && episode)
         ? `https://rest.opensubtitles.org/search/episode-${episode}/imdbid-${imdbId.replace('tt', '')}/season-${season}/sublanguageid-all`
         : `https://rest.opensubtitles.org/search/imdbid-${imdbId.replace('tt', '')}/sublanguageid-all`;
 
@@ -128,6 +128,8 @@ Deno.serve(async (req: Request) => {
             }
           }
         }
+      } else {
+        console.error('[subtitles] OpenSubtitles response not OK:', osResponse.status, osResponse.statusText);
       }
     } catch (osError) {
       console.error('[subtitles] OpenSubtitles fetch failed:', osError);
