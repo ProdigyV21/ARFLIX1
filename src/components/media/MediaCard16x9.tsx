@@ -28,18 +28,23 @@ export default function MediaCard16x9({ item, onClick, showTitle = false }: Medi
         onClick={onClick}
         onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && onClick?.()}
       >
-        {!hasValidImage && !imageError && (
-          <div className="fit-abs bg-gradient-to-br from-neutral-800 to-neutral-900" />
+        {!hasValidImage || imageError ? (
+          <div className="fit-abs bg-gradient-to-br from-neutral-800 to-neutral-900 flex items-center justify-center">
+            <div className="text-white/40 text-center px-6">
+              <div className="text-sm font-medium">{item.title}</div>
+              {item.year && <div className="text-xs mt-1">{item.year}</div>}
+            </div>
+          </div>
+        ) : (
+          <img
+            src={item.image16x9}
+            alt={item.title}
+            loading="lazy"
+            decoding="async"
+            className="fit-abs"
+            onError={() => setImageError(true)}
+          />
         )}
-
-        <img
-          src={item.image16x9}
-          alt={item.title}
-          loading="lazy"
-          decoding="async"
-          className="fit-abs"
-          onError={() => setImageError(true)}
-        />
 
         <div className="fit-abs bg-gradient-to-t from-black/90 via-transparent to-transparent pointer-events-none" />
 
