@@ -77,52 +77,56 @@ export function HomePage({ onNavigate }: HomePageProps) {
 
   async function enrichContinueWatchingImages(watching: WatchProgress[]): Promise<WatchProgress[]> {
     const BASE_URL = 'https://v3-cinemeta.strem.io';
-
-    const enriched = await Promise.all(
-      watching.map(async (item) => {
-        try {
-          if (item.poster && item.backdrop) {
-            console.log(`[CW] Item "${item.title}" already has images, skipping`);
-            return item;
-          }
-
-          const type: 'movie' | 'series' = item.type === 'anime' ? 'series' : item.type;
-          const isImdbId = item.id.startsWith('tt') && /^tt\d+$/.test(item.id);
-
-          if (isImdbId) {
-            console.log(`[CW] Fetching meta directly for IMDb ID: ${item.id}`);
-            const metaUrl = `${BASE_URL}/meta/${type}/${encodeURIComponent(item.id)}.json`;
-            const metaRes = await fetch(metaUrl);
-
-            if (!metaRes.ok) {
-              console.error(`[CW] Failed to fetch meta for ${item.id}`);
+    const concurrency = 5;
+    const results: WatchProgress[] = [];
+    for (let i = 0; i < watching.length; i += concurrency) {
+      const batch = watching.slice(i, i + concurrency);
+      const enrichedBatch = await Promise.all(
+        batch.map(async (item) => {
+          try {
+            // Skip items that already have artwork
+            if (item.poster && item.backdrop) {
               return item;
             }
 
-            const metaData = await metaRes.json();
-            const meta = metaData.meta;
+            const type: 'movie' | 'series' = item.type === 'anime' ? 'series' : item.type;
+            const isImdbId = item.id.startsWith('tt') && /^tt\d+$/.test(item.id);
 
-            const enrichedItem: WatchProgress = {
-              ...item,
-              title: meta.name || item.title,
-              backdrop: meta.background || item.backdrop,
-              poster: meta.poster || item.poster
-            };
+            if (isImdbId) {
+              const metaUrl = `${BASE_URL}/meta/${type}/${encodeURIComponent(item.id)}.json`;
+              const metaRes = await fetch(metaUrl);
 
-            saveProgress(enrichedItem);
-            return enrichedItem;
+              if (!metaRes.ok) {
+                console.error(`[CW] Failed to fetch meta for ${item.id}`);
+                return item;
+              }
+
+              const metaData = await metaRes.json();
+              const meta = metaData.meta;
+
+              const enrichedItem: WatchProgress = {
+                ...item,
+                title: meta.name || item.title,
+                backdrop: meta.background || item.backdrop,
+                poster: meta.poster || item.poster,
+              };
+
+              // Persist enriched progress; ignore returned promise
+              void saveProgress(enrichedItem);
+              return enrichedItem;
+            }
+
+            // Unsupported ID format; return original
+            return item;
+          } catch (error) {
+            console.error(`[CW] Failed to enrich "${item.title}":`, error);
+            return item;
           }
-
-          console.log(`[CW] Invalid or missing ID for "${item.title}" (${item.id}), skipping`);
-          return item;
-        } catch (error) {
-          console.error(`[CW] Failed to enrich "${item.title}":`, error);
-          return item;
-        }
-      })
-    );
-
-    return enriched;
+        }),
+      );
+      results.push(...enrichedBatch);
+    }
+    return results;
   }
 
   function handleItemClick(item: CatalogItem) {
