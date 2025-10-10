@@ -13,11 +13,14 @@ export type AttachResult = {
 
 export type StreamKind = "hls" | "dash" | "mp4" | "unknown";
 
+let loadToken = 0;
+
 export async function attachSource(
   video: HTMLVideoElement,
   url: string,
   kind: StreamKind,
-  onError?: (error: Error) => void
+  onError?: (error: Error) => void,
+  onManifestParsed?: () => void
 ): Promise<AttachResult> {
   console.log(`[MediaEngine] Attaching source: ${kind}`, url.substring(0, 100));
 
@@ -41,6 +44,8 @@ export async function attachSource(
         },
       };
     } else if (Hls.isSupported()) {
+      const token = ++loadToken;
+
       const hls = new Hls({
         enableWorker: true,
         lowLatencyMode: false,
@@ -54,7 +59,13 @@ export async function attachSource(
       hls.attachMedia(video);
 
       hls.on(Hls.Events.MEDIA_ATTACHED, () => {
+        if (token !== loadToken) return; // newer load started
         hls.loadSource(url);
+      });
+
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        if (token !== loadToken) return; // newer load started
+        onManifestParsed?.();
       });
 
       hls.on(Hls.Events.ERROR, (event, data) => {
@@ -118,14 +129,15 @@ export function useMediaEngine() {
       video: HTMLVideoElement,
       url: string,
       kind: StreamKind,
-      onError?: (error: Error) => void
+      onError?: (error: Error) => void,
+      onManifestParsed?: () => void
     ) => {
       if (engineRef.current) {
         engineRef.current.destroy();
         engineRef.current = null;
       }
 
-      const result = await attachSource(video, url, kind, onError);
+      const result = await attachSource(video, url, kind, onError, onManifestParsed);
       engineRef.current = result;
       return result;
     },

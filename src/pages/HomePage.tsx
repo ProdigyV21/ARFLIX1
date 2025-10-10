@@ -39,6 +39,22 @@ export function HomePage({ onNavigate }: HomePageProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    if (selectedItem) {
+      const item = rows.flatMap(r => r.items).find(i => i.id === selectedItem) ||
+                   continueWatching.find(i => i.id === selectedItem);
+      if (item) {
+        requestAnimationFrame(() => {
+          onNavigate('details', {
+            id: selectedItem,
+            type: item.type || 'movie'
+          });
+        });
+        setSelectedItem(null);
+      }
+    }
+  }, [selectedItem, rows, continueWatching, onNavigate]);
+
   async function loadContent() {
     try {
       setLoading(true);
@@ -182,18 +198,6 @@ export function HomePage({ onNavigate }: HomePageProps) {
         </div>
       )}
 
-      {selectedItem && (() => {
-        const item = rows.flatMap(r => r.items).find(i => i.id === selectedItem) ||
-                     continueWatching.find(i => i.id === selectedItem);
-        if (item) {
-          onNavigate('details', {
-            id: selectedItem,
-            type: item.type || 'movie'
-          });
-          setSelectedItem(null);
-        }
-        return null;
-      })()}
     </div>
   );
 }

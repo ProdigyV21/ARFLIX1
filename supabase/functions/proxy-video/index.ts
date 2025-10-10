@@ -84,8 +84,8 @@ Deno.serve(async (req: Request) => {
     if (!response.ok && response.status !== 206) {
       console.error('[proxy-video] Failed:', response.status, response.statusText);
       return new Response(
-        JSON.stringify({ error: `Failed to fetch video: ${response.status}` }),
-        { status: response.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: `Upstream ${response.status}` }),
+        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 

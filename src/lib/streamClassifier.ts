@@ -1,5 +1,21 @@
 import { DeviceCapabilities, isCapabilitySupported } from './deviceCapabilities';
 
+export function isBrowserPlayableAudio(label?: string, codec?: string): boolean {
+  if (!label && !codec) return true;
+
+  const text = `${label || ''} ${codec || ''}`.toLowerCase();
+
+  // Block known passthrough-only audio codecs
+  if (text.includes('ec-3') || text.includes('eac3') || text.includes('ac-3') ||
+      text.includes('ac3') || text.includes('dts') || text.includes('atmos') ||
+      text.includes('truehd')) {
+    return false;
+  }
+
+  // Prefer AAC/MP4A
+  return text.includes('aac') || text.includes('mp4a') || text.includes('mp3') || !codec;
+}
+
 export interface StreamClassification {
   container?: string;
   audioCodec?: string;
@@ -297,16 +313,22 @@ export function selectPlayableSource(
     return null;
   }
 
-  playable.sort((a, b) => b.classification.score - a.classification.score);
+  // Prioritize browser-compatible audio
+  const withGoodAudio = playable.filter(s =>
+    isBrowserPlayableAudio(s.title, s.classification.audioCodec)
+  );
+
+  const candidates = withGoodAudio.length > 0 ? withGoodAudio : playable;
+  candidates.sort((a, b) => b.classification.score - a.classification.score);
 
   console.log('[StreamClassifier] Best source:', {
-    title: playable[0].title,
-    score: playable[0].classification.score,
-    audio: playable[0].classification.audioCodec,
-    container: playable[0].classification.container
+    title: candidates[0].title,
+    score: candidates[0].classification.score,
+    audio: candidates[0].classification.audioCodec,
+    container: candidates[0].classification.container
   });
 
-  return playable[0];
+  return candidates[0];
 }
 
 export function getCodecBadge(classification: StreamClassification): { text: string; compatible: boolean } {

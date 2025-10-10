@@ -283,17 +283,30 @@ export function PlayerPage({
     }
 
     try {
-      const engine = await attach(video, streamUrl, stream.kind, (error) => {
-        console.error('Player error:', error);
-        setError(`Playback error: ${error.message}. Trying fallback...`);
+      const engine = await attach(
+        video,
+        streamUrl,
+        stream.kind,
+        (error) => {
+          console.error('Player error:', error);
+          setError(`Playback error: ${error.message}. Trying fallback...`);
 
-        setTimeout(() => {
-          const nextStream = streams.find(s => s.url !== stream.url);
-          if (nextStream) {
-            initializePlayer(nextStream, video.currentTime);
-          }
-        }, 2000);
-      });
+          setTimeout(() => {
+            const nextStream = streams.find(s => s.url !== stream.url);
+            if (nextStream) {
+              initializePlayer(nextStream, video.currentTime);
+            }
+          }, 2000);
+        },
+        () => {
+          // onManifestParsed - wait for manifest before playing
+          video.volume = 1;
+          video.muted = false;
+          video.play().catch(e => {
+            console.warn('Autoplay failed:', e);
+          });
+        }
+      );
 
       video.addEventListener('loadedmetadata', () => {
         const dur = video.duration;
@@ -394,17 +407,6 @@ export function PlayerPage({
 
       video.addEventListener('ended', () => {
         setIsPlaying(false);
-      });
-
-      video.volume = 1;
-      video.muted = false;
-      console.log('[PlayerPage] Audio initialized - volume:', video.volume, 'muted:', video.muted);
-
-      video.play().catch(e => {
-        console.error('Autoplay failed:', e);
-        video.muted = false;
-        video.volume = 1;
-        console.log('[PlayerPage] Audio reset after autoplay fail - volume:', video.volume, 'muted:', video.muted);
       });
     } catch (err: any) {
       console.error('Failed to initialize player:', err);
