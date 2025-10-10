@@ -179,9 +179,9 @@ export function HomePage({ onNavigate }: HomePageProps) {
         <section className="px-8 mb-6">
           <h2 className="text-3xl font-bold mb-6">Continue Watching</h2>
           <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
-            {continueWatching.map((item) => {
+            {continueWatching.map((item, index) => {
               return (
-                <div key={item.id} className="flex-shrink-0 w-[360px]">
+                <div key={`${item.id}-${item.title}-${index}`} className="flex-shrink-0 w-[360px]">
                   <MediaCard16x9
                     item={{
                       id: item.id,
