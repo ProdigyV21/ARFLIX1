@@ -152,4 +152,13 @@ export const catalogAPI = {
       return { results: [] };
     }
   },
+
+  async resolveTitleToId(query: { type: 'movie' | 'series'; title: string; year?: number }): Promise<{ id: string; type: 'movie' | 'series' }> {
+    try {
+      return await metadataProvider.resolveTitleToId(query);
+    } catch (error) {
+      console.error('[Catalog] resolveTitleToId error:', error);
+      throw error;
+    }
+  },
 };

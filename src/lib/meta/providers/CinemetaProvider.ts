@@ -43,13 +43,8 @@ interface CinemetaResponse {
   meta?: CinemetaMeta;
 }
 
-function normalizeStremioId(rawId: string): string {
-  if (rawId.startsWith('tmdb:')) {
-    const parts = rawId.split(':');
-    const last = parts[parts.length - 1];
-    return `tmdb:${last}`;
-  }
-  return rawId;
+function isTmdbId(id: string): boolean {
+  return id.toLowerCase().startsWith('tmdb:');
 }
 
 function inferTypeFromId(rawId: string): 'movie' | 'series' | null {
@@ -228,11 +223,14 @@ export class CinemetaProvider implements MetadataProvider {
   }
 
   async getTitle(typeArg: 'movie' | 'series' | undefined, rawId: string): Promise<Title> {
-    const normId = normalizeStremioId(rawId);
+    if (isTmdbId(rawId)) {
+      throw new Error('TMDB IDs are not supported by Cinemeta. Use IMDb IDs or search by title.');
+    }
+
     let type: 'movie' | 'series' = typeArg ?? inferTypeFromId(rawId) ?? 'movie';
 
     const tryUrl = (t: 'movie' | 'series') =>
-      `${BASE_URL}/meta/${t}/${encodeURIComponent(normId)}.json`;
+      `${BASE_URL}/meta/${t}/${encodeURIComponent(rawId)}.json`;
 
     try {
       const data: CinemetaResponse = await cachedFetch(tryUrl(type), META_TTL);
@@ -264,6 +262,29 @@ export class CinemetaProvider implements MetadataProvider {
         return title;
       }
       console.error('[Cinemeta] getTitle error:', error);
+      throw error;
+    }
+  }
+
+  async resolveTitleToId(query: { type: 'movie' | 'series'; title: string; year?: number }): Promise<{ id: string; type: 'movie' | 'series' }> {
+    const encodedQuery = encodeURIComponent(query.title.trim());
+    const url = `${BASE_URL}/catalog/${query.type}/search=${encodedQuery}.json`;
+
+    try {
+      const data: CinemetaResponse = await cachedFetch(url, SEARCH_TTL);
+      const metas = data.metas || [];
+
+      const match = query.year
+        ? metas.find((m: any) => Number(m.year) === Number(query.year)) ?? metas[0]
+        : metas[0];
+
+      if (!match) {
+        throw new Error('No match found');
+      }
+
+      return { id: match.id, type: query.type };
+    } catch (error) {
+      console.error('[Cinemeta] resolveTitleToId error:', error);
       throw error;
     }
   }

@@ -42,7 +42,9 @@ export interface MetadataProvider {
 
   search(type: 'movie' | 'series', query: string): Promise<Title[]>;
 
-  getTitle(type: 'movie' | 'series', id: string): Promise<Title>;
+  getTitle(type: 'movie' | 'series' | undefined, id: string): Promise<Title>;
+
+  resolveTitleToId(query: { type: 'movie' | 'series'; title: string; year?: number }): Promise<{ id: string; type: 'movie' | 'series' }>;
 
   getSeasonEpisodes(seriesId: string, season: number): Promise<Episode[]>;
 }

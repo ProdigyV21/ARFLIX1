@@ -84,9 +84,26 @@ export function HomePage({ onNavigate }: HomePageProps) {
 
         try {
           const type: 'movie' | 'series' = item.type === 'anime' ? 'series' : item.type;
-          const meta = await catalogAPI.getMeta(item.id, type);
+
+          let resolvedId = item.id;
+
+          if (item.id.toLowerCase().startsWith('tmdb:')) {
+            try {
+              const resolved = await catalogAPI.resolveTitleToId({
+                type,
+                title: item.title,
+              });
+              resolvedId = resolved.id;
+            } catch (resolveError) {
+              console.error(`Failed to resolve TMDB ID for ${item.title}:`, resolveError);
+              return item;
+            }
+          }
+
+          const meta = await catalogAPI.getMeta(resolvedId, type);
           return {
             ...item,
+            id: resolvedId,
             backdrop: meta.meta.backdrop,
             poster: meta.meta.poster
           };
