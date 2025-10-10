@@ -43,6 +43,22 @@ interface CinemetaResponse {
   meta?: CinemetaMeta;
 }
 
+function normalizeStremioId(rawId: string): string {
+  if (rawId.startsWith('tmdb:')) {
+    const parts = rawId.split(':');
+    const last = parts[parts.length - 1];
+    return `tmdb:${last}`;
+  }
+  return rawId;
+}
+
+function inferTypeFromId(rawId: string): 'movie' | 'series' | null {
+  const id = rawId.toLowerCase();
+  if (id.includes(':tv:') || id.includes(':show:') || id.includes(':series:')) return 'series';
+  if (id.includes(':movie:')) return 'movie';
+  return null;
+}
+
 async function fetchWithRetry(url: string, retries = 3): Promise<any> {
   const delays = [250, 500, 1000];
   let lastError: Error | null = null;
@@ -62,7 +78,9 @@ async function fetchWithRetry(url: string, retries = 3): Promise<any> {
         }
       }
 
-      throw new Error(`HTTP ${response.status}`);
+      const error: any = new Error(`HTTP ${response.status}`);
+      error.status = response.status;
+      throw error;
     } catch (error: any) {
       lastError = error;
       if (i < retries - 1) {
@@ -209,11 +227,15 @@ export class CinemetaProvider implements MetadataProvider {
     }
   }
 
-  async getTitle(type: 'movie' | 'series', id: string): Promise<Title> {
-    const url = `${BASE_URL}/meta/${type}/${id}.json`;
+  async getTitle(typeArg: 'movie' | 'series' | undefined, rawId: string): Promise<Title> {
+    const normId = normalizeStremioId(rawId);
+    let type: 'movie' | 'series' = typeArg ?? inferTypeFromId(rawId) ?? 'movie';
+
+    const tryUrl = (t: 'movie' | 'series') =>
+      `${BASE_URL}/meta/${t}/${encodeURIComponent(normId)}.json`;
 
     try {
-      const data: CinemetaResponse = await cachedFetch(url, META_TTL);
+      const data: CinemetaResponse = await cachedFetch(tryUrl(type), META_TTL);
       if (!data.meta) {
         throw new Error('No metadata found');
       }
@@ -225,7 +247,22 @@ export class CinemetaProvider implements MetadataProvider {
       }
 
       return title;
-    } catch (error) {
+    } catch (error: any) {
+      if (!typeArg && error?.status === 404) {
+        const altType: 'movie' | 'series' = type === 'movie' ? 'series' : 'movie';
+        const data: CinemetaResponse = await cachedFetch(tryUrl(altType), META_TTL);
+        if (!data.meta) {
+          throw new Error('No metadata found');
+        }
+
+        const title = mapToTitle(data.meta);
+
+        if (altType === 'series') {
+          title.seasons = extractSeasons(data.meta);
+        }
+
+        return title;
+      }
       console.error('[Cinemeta] getTitle error:', error);
       throw error;
     }

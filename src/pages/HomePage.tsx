@@ -78,21 +78,17 @@ export function HomePage({ onNavigate }: HomePageProps) {
   async function enrichContinueWatchingImages(watching: WatchProgress[]): Promise<WatchProgress[]> {
     const enriched = await Promise.all(
       watching.map(async (item) => {
-        // If already has image, return as-is
         if (item.backdrop || item.poster) {
-          console.log(`Item ${item.title} already has images:`, { backdrop: item.backdrop, poster: item.poster });
           return item;
         }
 
-        // Fetch metadata to get images
         try {
-          console.log(`Fetching metadata for ${item.title} (${item.id})`);
-          const meta = await catalogAPI.getMeta(item.type, item.id);
-          console.log(`Got meta for ${item.title}:`, { backdrop: meta.backdrop, background: meta.background, poster: meta.poster });
+          const type: 'movie' | 'series' = item.type === 'anime' ? 'series' : item.type;
+          const meta = await catalogAPI.getMeta(item.id, type);
           return {
             ...item,
-            backdrop: meta.backdrop || meta.background,
-            poster: meta.poster
+            backdrop: meta.meta.backdrop,
+            poster: meta.meta.poster
           };
         } catch (error) {
           console.error(`Failed to fetch meta for ${item.id}:`, error);
@@ -101,7 +97,6 @@ export function HomePage({ onNavigate }: HomePageProps) {
       })
     );
 
-    console.log('Enriched continue watching:', enriched);
     return enriched;
   }
 
