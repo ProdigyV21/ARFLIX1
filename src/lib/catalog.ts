@@ -113,14 +113,28 @@ export const catalogAPI = {
 
   async getMeta(id: string): Promise<MetaResponse> {
     try {
-      const type = id.startsWith('tt') ? 'movie' : 'movie';
-      const title = await metadataProvider.getTitle(type, id);
+      // Try both movie and series to detect the correct type
+      let title: Title | null = null;
+      let detectedType: 'movie' | 'series' = 'movie';
+
+      try {
+        title = await metadataProvider.getTitle('series', id);
+        detectedType = 'series';
+      } catch {
+        try {
+          title = await metadataProvider.getTitle('movie', id);
+          detectedType = 'movie';
+        } catch (e) {
+          throw new Error('Content not found');
+        }
+      }
 
       const item = titleToCatalogItem(title);
 
       return {
         meta: {
           ...item,
+          type: detectedType,
           runtime: title.runtime,
           genres: title.genres,
           imdbRating: title.rating?.toFixed(1),

@@ -5,14 +5,19 @@ import { fetchEpisodes } from '../../lib/api';
 const API_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
 interface Episode {
-  id: number;
-  episode_number: number;
-  title: string;
-  overview: string;
-  still: string | null;
-  air_date: string | null;
-  runtime: number | null;
-  rating: number;
+  id?: string | number;
+  episode_number?: number;
+  number?: number;
+  season?: number;
+  title?: string;
+  name?: string;
+  overview?: string;
+  description?: string;
+  still?: string | null;
+  airDate?: string | null;
+  air_date?: string | null;
+  runtime?: number | null;
+  rating?: number;
 }
 
 interface EpisodesTabProps {
@@ -33,13 +38,14 @@ export function EpisodesTab({ itemId, meta, onPlay }: EpisodesTabProps) {
         setLoading(true);
         setError(null);
 
-        const [, , tmdbId] = itemId.split(':');
-        if (!tmdbId) {
-          setError('No TMDB ID available');
-          return;
+        // Cinemeta uses IMDB IDs directly
+        let contentId = itemId;
+        if (itemId.includes(':')) {
+          const parts = itemId.split(':');
+          contentId = parts[2] || parts[0];
         }
 
-        const data = await fetchEpisodes(tmdbId, season);
+        const data = await fetchEpisodes(contentId, season);
         setEpisodes(data.episodes || []);
       } catch (err: any) {
         console.error('Failed to load episodes:', err);
@@ -97,49 +103,54 @@ export function EpisodesTab({ itemId, meta, onPlay }: EpisodesTabProps) {
       </div>
 
       <div className="grid gap-4">
-        {episodes.map((episode) => (
-          <button
-            key={episode.id}
-            data-focusable="true"
-            onClick={() => onPlay?.(season, episode.episode_number)}
-            className="group bg-white/5 hover:bg-white/10 rounded-lg overflow-hidden flex gap-4 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/50 text-left w-full"
-          >
-            <div className="relative w-64 h-36 flex-shrink-0">
-              {episode.still ? (
-                <>
-                  <img
-                    src={episode.still}
-                    alt={episode.title}
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                    <Play className="w-12 h-12" />
-                  </div>
-                </>
-              ) : (
-                <div className="w-full h-full bg-white/5 flex items-center justify-center">
-                  <Play className="w-12 h-12 text-white/30" />
-                </div>
-              )}
-            </div>
+        {episodes.map((episode) => {
+          const episodeNum = episode.number || episode.episode_number || 0;
+          const episodeTitle = episode.title || episode.name || `Episode ${episodeNum}`;
+          const episodeDesc = episode.overview || episode.description || '';
 
-            <div className="flex-1 py-4 pr-4">
-              <div className="flex items-start justify-between mb-2">
-                <h3 className="text-lg font-semibold">
-                  {episode.episode_number}. {episode.title}
-                </h3>
-                {episode.runtime && (
-                  <span className="text-sm text-white/60">{episode.runtime} min</span>
+          return (
+            <button
+              key={episode.id || episodeNum}
+              data-focusable="true"
+              onClick={() => onPlay?.(season, episodeNum)}
+              className="group bg-white/5 hover:bg-white/10 rounded-lg overflow-hidden flex gap-4 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/50 text-left w-full"
+            >
+              <div className="relative w-64 h-36 flex-shrink-0">
+                {episode.still ? (
+                  <>
+                    <img
+                      src={episode.still}
+                      alt={episodeTitle}
+                      className="w-full h-full object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <Play className="w-12 h-12" />
+                    </div>
+                  </>
+                ) : (
+                  <div className="w-full h-full bg-white/5 flex items-center justify-center">
+                    <Play className="w-12 h-12 text-white/30" />
+                  </div>
                 )}
               </div>
 
-              <p className="text-white/70 line-clamp-2 mb-2">{episode.overview}</p>
+              <div className="flex-1 py-4 pr-4">
+                <div className="flex items-start justify-between mb-2">
+                  <h3 className="text-lg font-semibold">
+                    {episodeNum}. {episodeTitle}
+                  </h3>
+                  {episode.runtime && (
+                    <span className="text-sm text-white/60">{episode.runtime} min</span>
+                  )}
+              </div>
+
+              <p className="text-white/70 line-clamp-2 mb-2">{episodeDesc}</p>
 
               <div className="flex items-center gap-4 text-sm text-white/60">
-                {episode.air_date && (
-                  <span>{new Date(episode.air_date).toLocaleDateString()}</span>
+                {(episode.air_date || episode.airDate) && (
+                  <span>{new Date(episode.air_date || episode.airDate || '').toLocaleDateString()}</span>
                 )}
-                {episode.rating > 0 && (
+                {episode.rating && episode.rating > 0 && (
                   <span className="flex items-center gap-1">
                     <span className="text-yellow-400">★</span>
                     {episode.rating.toFixed(1)}
@@ -148,7 +159,8 @@ export function EpisodesTab({ itemId, meta, onPlay }: EpisodesTabProps) {
               </div>
             </div>
           </button>
-        ))}
+        );
+        })}
       </div>
     </div>
   );

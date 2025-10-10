@@ -57,9 +57,14 @@ interface Season {
 }
 
 interface Episode {
-  episodeNumber: number;
-  title: string;
+  id?: string;
+  episodeNumber?: number;
+  number?: number;
+  season?: number;
+  title?: string;
+  name?: string;
   overview?: string;
+  description?: string;
   still?: string;
   airDate?: string;
   runtime?: number;
@@ -108,17 +113,39 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
       setMeta(metaData);
 
       if ((metaData.type === 'series' || metaData.type === 'anime') && metaData.id) {
-        const [source, mediaType, tmdbId] = metaData.id.split(':');
+        // For Cinemeta, ID is IMDB ID (tt1234567)
+        if (metaData.id.startsWith('tt')) {
+          const seasonsData = await fetchSeasons(metaData.id);
+          const seasonNumbers = seasonsData.seasons || [];
 
-        if (source === 'anilist') {
-          loadAnimeEpisodes(metaData.id);
-        } else if (tmdbId) {
-          const seasonsData = await fetchSeasons(tmdbId);
-          const validSeasons = seasonsData.seasons.filter((s: Season) => s.seasonNumber > 0);
+          // Convert season numbers to Season objects
+          const validSeasons = seasonNumbers.map((num: number) => ({
+            seasonNumber: num,
+            name: `Season ${num}`,
+            episodeCount: 0,
+          }));
+
           setSeasons(validSeasons);
           if (validSeasons.length > 0) {
             setSelectedSeason(validSeasons[0].seasonNumber);
             loadEpisodesForSeason(metaData.id, validSeasons[0].seasonNumber);
+          }
+        } else if (metaData.id.includes(':')) {
+          // Fallback for old format (tmdb:tv:123)
+          const parts = metaData.id.split(':');
+          const source = parts[0];
+          const tmdbId = parts[2];
+
+          if (source === 'anilist') {
+            loadAnimeEpisodes(metaData.id);
+          } else if (tmdbId) {
+            const seasonsData = await fetchSeasons(tmdbId);
+            const validSeasons = seasonsData.seasons.filter((s: Season) => s.seasonNumber > 0);
+            setSeasons(validSeasons);
+            if (validSeasons.length > 0) {
+              setSelectedSeason(validSeasons[0].seasonNumber);
+              loadEpisodesForSeason(metaData.id, validSeasons[0].seasonNumber);
+            }
           }
         }
       }
@@ -208,15 +235,19 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
   return (
     <div ref={containerRef} className="min-h-screen -ml-[90px]">
       <div className="relative min-h-screen">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{
-            backgroundImage: `url(${meta.backdrop || meta.background || meta.poster})`,
-          }}
-        >
-          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
-          <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-black/40" />
-        </div>
+        {(meta.backdrop || meta.background || meta.poster) ? (
+          <div
+            className="absolute inset-0 bg-cover bg-center"
+            style={{
+              backgroundImage: `url(${meta.backdrop || meta.background || meta.poster})`,
+            }}
+          >
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-black/40" />
+          </div>
+        ) : (
+          <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 via-black to-zinc-900" />
+        )}
 
         <div className="relative flex flex-col justify-start pt-24 pb-8 pl-[102px] pr-12">
           <button
