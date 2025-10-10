@@ -318,12 +318,33 @@ export function selectPlayableSource(
     playable = filtered;
   }
 
+  // Prioritize HLS streams (they often have subtitle tracks)
+  const hlsStreams = playable.filter(s =>
+    s.classification.container === 'hls' || s.url.includes('.m3u8')
+  );
+
   // Prioritize browser-compatible audio
   const withGoodAudio = playable.filter(s =>
     isBrowserPlayableAudio(s.title, s.classification.audioCodec)
   );
 
-  const candidates = withGoodAudio.length > 0 ? withGoodAudio : playable;
+  // Prefer HLS + good audio, then HLS alone, then good audio, then anything playable
+  let candidates: typeof playable;
+
+  const hlsWithGoodAudio = hlsStreams.filter(s =>
+    isBrowserPlayableAudio(s.title, s.classification.audioCodec)
+  );
+
+  if (hlsWithGoodAudio.length > 0) {
+    candidates = hlsWithGoodAudio;
+  } else if (hlsStreams.length > 0) {
+    candidates = hlsStreams;
+  } else if (withGoodAudio.length > 0) {
+    candidates = withGoodAudio;
+  } else {
+    candidates = playable;
+  }
+
   candidates.sort((a, b) => b.classification.score - a.classification.score);
 
   console.log('[StreamClassifier] Best source:', {
