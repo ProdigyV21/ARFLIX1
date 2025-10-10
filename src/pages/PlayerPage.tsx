@@ -131,8 +131,8 @@ export function PlayerPage({
     console.log('[PlayerPage] === CHECKING FOR EMBEDDED SUBTITLES ===');
 
     // HLS.js provides text tracks
-    if (mediaEngineRef.current && (mediaEngineRef.current as any).textTracks) {
-      const hlsTracks = (mediaEngineRef.current as any).textTracks;
+    if (engineRef.current && (engineRef.current as any).textTracks) {
+      const hlsTracks = (engineRef.current as any).textTracks;
       console.log('[PlayerPage] HLS.js text tracks:', hlsTracks.length);
     }
 
