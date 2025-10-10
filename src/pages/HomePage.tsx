@@ -21,6 +21,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
 
   const [rows, setRows] = useState<HomeRow[]>([]);
   const [continueWatching, setContinueWatching] = useState<WatchProgress[]>([]);
+  const [continueWatchingMeta, setContinueWatchingMeta] = useState<Map<string, { backdrop?: string }>>(new Map());
   const [loading, setLoading] = useState(true);
   const [hasAddons, setHasAddons] = useState(false);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
@@ -66,12 +67,36 @@ export function HomePage({ onNavigate }: HomePageProps) {
 
       setRows(catalogData.rows || []);
       setHasAddons(addonsData.addons?.filter((a: any) => a.enabled).length > 0);
-      setContinueWatching(getContinueWatching(20));
+
+      const watching = getContinueWatching(20);
+      setContinueWatching(watching);
+
+      // Fetch metadata for items without backdrop
+      fetchMissingBackdrops(watching);
     } catch (error) {
       console.error('Failed to load content:', error);
     } finally {
       setLoading(false);
     }
+  }
+
+  async function fetchMissingBackdrops(watching: WatchProgress[]) {
+    const metaMap = new Map<string, { backdrop?: string }>();
+
+    for (const item of watching) {
+      if (!item.backdrop) {
+        try {
+          const meta = await catalogAPI.getMeta(item.type, item.id);
+          if (meta.backdrop || meta.background) {
+            metaMap.set(item.id, { backdrop: meta.backdrop || meta.background });
+          }
+        } catch (error) {
+          console.error(`Failed to fetch meta for ${item.id}:`, error);
+        }
+      }
+    }
+
+    setContinueWatchingMeta(metaMap);
   }
 
   function handleItemClick(item: CatalogItem) {
@@ -129,9 +154,10 @@ export function HomePage({ onNavigate }: HomePageProps) {
           <h2 className="text-3xl font-bold mb-6">Continue Watching</h2>
           <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
             {continueWatching.map((item) => {
-              // Prefer backdrop from watch progress (episode still), then catalog item
+              // Prefer backdrop from watch progress (episode still), then fetched metadata, then catalog item
               const catalogItem = rows.flatMap(r => r.items).find((i: CatalogItem) => i.id === item.id);
-              const image = item.backdrop || catalogItem?.backdrop || catalogItem?.poster || item.poster || '';
+              const fetchedMeta = continueWatchingMeta.get(item.id);
+              const image = item.backdrop || fetchedMeta?.backdrop || catalogItem?.backdrop || catalogItem?.poster || item.poster || '';
 
               return (
                 <div key={item.id} className="flex-shrink-0 w-[360px]">
