@@ -34,6 +34,7 @@ interface CinemetaMeta {
     released?: string;
     aired?: string;
     runtime?: string | number;
+    thumbnail?: string;
   }>;
 }
 
@@ -158,6 +159,7 @@ function extractEpisodes(item: CinemetaMeta, season: number): Episode[] {
       overview: v.overview || v.description,
       airDate: v.released || v.aired,
       runtime: v.runtime ? parseInt(String(v.runtime)) : undefined,
+      still: v.thumbnail,
     }))
     .sort((a, b) => a.number - b.number);
 }

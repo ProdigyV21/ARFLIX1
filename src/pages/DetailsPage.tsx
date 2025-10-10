@@ -374,47 +374,52 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
             <div>
               <h3 className="text-2xl font-bold mb-6">Episodes</h3>
               <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
-                {episodes.map((episode) => (
-                  <button
-                    key={episode.episodeNumber}
-                    onClick={() => handlePlay(selectedSeason, episode.episodeNumber)}
-                    className="group text-left bg-white/5 rounded-lg overflow-hidden hover:bg-white/10 transition-all flex-shrink-0 w-[420px]"
-                  >
-                    <div className="relative aspect-video bg-gray-800">
-                      {episode.still ? (
-                        <img
-                          src={episode.still}
-                          alt={episode.title}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <Play className="w-16 h-16 text-white/30" />
+                {episodes.map((episode) => {
+                  const episodeNum = episode.episodeNumber || episode.number || 0;
+                  const episodeTitle = episode.title || episode.name || `Episode ${episodeNum}`;
+
+                  return (
+                    <button
+                      key={episode.id || episodeNum}
+                      onClick={() => handlePlay(selectedSeason, episodeNum)}
+                      className="group text-left bg-white/5 rounded-lg overflow-hidden hover:bg-white/10 transition-all flex-shrink-0 w-[420px]"
+                    >
+                      <div className="relative aspect-video bg-gray-800">
+                        {episode.still ? (
+                          <img
+                            src={episode.still}
+                            alt={episodeTitle}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center">
+                            <Play className="w-16 h-16 text-white/30" />
+                          </div>
+                        )}
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
+                          <Play className="w-12 h-12 text-white opacity-0 group-hover:opacity-100 transition-opacity fill-current" />
                         </div>
-                      )}
-                      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/40 transition-colors flex items-center justify-center">
-                        <Play className="w-12 h-12 text-white opacity-0 group-hover:opacity-100 transition-opacity fill-current" />
                       </div>
-                    </div>
-                    <div className="p-4">
-                      <div className="flex items-start justify-between mb-2">
-                        <h4 className="font-semibold text-base line-clamp-1">
-                          {episode.episodeNumber}. {episode.title}
-                        </h4>
-                        {episode.runtime && (
-                          <span className="text-sm text-white/60 ml-2 flex-shrink-0">
-                            {episode.runtime}m
+                      <div className="p-4">
+                        <div className="flex items-start justify-between mb-2">
+                          <h4 className="font-semibold text-base line-clamp-1">
+                            {episodeNum}. {episodeTitle}
+                          </h4>
+                          {episode.runtime && (
+                            <span className="text-sm text-white/60 ml-2 flex-shrink-0">
+                              {episode.runtime}m
                           </span>
                         )}
                       </div>
-                      {episode.overview && (
+                      {(episode.overview || episode.description) && (
                         <p className="text-sm text-white/70 line-clamp-2">
-                          {episode.overview}
+                          {episode.overview || episode.description}
                         </p>
                       )}
                     </div>
                   </button>
-                ))}
+                );
+                })}
               </div>
             </div>
           )}

@@ -30,6 +30,7 @@ export interface Episode {
   overview?: string;
   airDate?: string;
   runtime?: number;
+  still?: string;
 }
 
 export interface MetadataProvider {
