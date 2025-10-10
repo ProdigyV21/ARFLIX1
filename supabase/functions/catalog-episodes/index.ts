@@ -38,6 +38,60 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Handle IMDb IDs directly
+    if (id.startsWith('tt')) {
+      if (!season) {
+        return new Response(
+          JSON.stringify({ error: "Missing season parameter" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Look up TMDB ID from IMDb ID
+      const findRes = await fetch(`${TMDB_BASE}/find/${id}?api_key=${TMDB_API_KEY}&external_source=imdb_id`);
+      if (!findRes.ok) {
+        return new Response(
+          JSON.stringify({ error: "Failed to find TV show" }),
+          { status: findRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const findData = await findRes.json();
+      const tvShow = findData.tv_results?.[0];
+
+      if (!tvShow) {
+        return new Response(
+          JSON.stringify({ error: "TV show not found", episodes: [] }),
+          { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const tmdbId = tvShow.id;
+      const res = await fetch(`${TMDB_BASE}/tv/${tmdbId}/season/${season}?api_key=${TMDB_API_KEY}`);
+      if (!res.ok) {
+        return new Response(
+          JSON.stringify({ error: "Failed to fetch episodes" }),
+          { status: res.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const data = await res.json();
+      const episodes = (data.episodes || []).map((e: any) => ({
+        episodeNumber: e.episode_number,
+        title: e.name,
+        overview: e.overview,
+        still: e.still_path ? `https://image.tmdb.org/t/p/w500${e.still_path}` : null,
+        airDate: e.air_date,
+        runtime: e.runtime,
+        voteAverage: e.vote_average,
+      }));
+
+      return new Response(
+        JSON.stringify({ episodes }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     const [source] = id.split(':');
 
     if (source === 'anilist') {

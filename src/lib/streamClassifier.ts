@@ -300,11 +300,21 @@ export function selectPlayableSource(
     reasons: s.classification.incompatibilityReasons
   })));
 
-  const playable = classified.filter(s => s.classification.isPlayable);
+  let playable = classified.filter(s => s.classification.isPlayable);
 
   if (playable.length === 0) {
     console.warn('[StreamClassifier] No playable sources found!');
     return null;
+  }
+
+  // Filter out trailers/samples (streams with "trailer", "sample", "preview" in title)
+  const filtered = playable.filter(s => {
+    const lower = s.title.toLowerCase();
+    return !lower.includes('trailer') && !lower.includes('sample') && !lower.includes('preview');
+  });
+
+  if (filtered.length > 0) {
+    playable = filtered;
   }
 
   // Prioritize browser-compatible audio

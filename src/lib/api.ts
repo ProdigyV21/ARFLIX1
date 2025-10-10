@@ -138,13 +138,23 @@ export async function fetchSeasons(imdbId: string) {
 }
 
 export async function fetchEpisodes(id: string, season?: number) {
-  const { metadataProvider } = await import('./meta');
   try {
     if (season === undefined) {
       return { episodes: [] };
     }
-    const episodes = await metadataProvider.getSeasonEpisodes(id, season);
-    return { episodes };
+
+    // Use backend API for episodes to get TMDB images
+    const headers = await getAuthHeaders();
+    const url = `${API_BASE}/catalog-episodes/${id}?season=${season}`;
+    const res = await fetch(url, { headers });
+
+    if (!res.ok) {
+      console.error('[API] fetchEpisodes failed:', res.status, res.statusText);
+      return { episodes: [] };
+    }
+
+    const data = await res.json();
+    return { episodes: data.episodes || [] };
   } catch (error) {
     console.error('[API] fetchEpisodes error:', error);
     return { episodes: [] };
