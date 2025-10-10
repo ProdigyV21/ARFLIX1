@@ -198,12 +198,8 @@ function calculateCompatibilityScore(
     '480p': 480
   }[classification.resolution || ''] || 1080;
 
-  if (caps.maxHeight && resolutionValue > caps.maxHeight) {
-    score -= 50;
-  } else {
-    // Increased weight from /100 to /10 to prioritize resolution
-    score += resolutionValue / 10;
-  }
+  // Always add resolution score - no caps
+  score += resolutionValue / 10;
 
   return score;
 }
@@ -259,9 +255,7 @@ function checkIncompatibilities(
       '480p': 480
     }[classification.resolution] || 0;
 
-    if (caps.maxHeight && resolutionValue > caps.maxHeight) {
-      reasons.push(`Resolution ${classification.resolution} exceeds device maximum ${caps.maxHeight}p`);
-    }
+    // No resolution caps - allow all resolutions
   }
 
   return reasons;

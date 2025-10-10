@@ -32,6 +32,10 @@ type NormalizedStream = {
   sourceName?: string;
   infoHash?: string;
   fileIdx?: number;
+  fileSize?: string;
+  audioCodec?: string;
+  seeds?: number;
+  peers?: number;
 };
 
 type StreamsResponse = {
@@ -162,6 +166,34 @@ function parseHDR(title: string): "dolby_vision" | "hdr10" | "none" {
   return "none";
 }
 
+function parseFileSize(title: string): string | undefined {
+  const sizeMatch = title.match(/(\d+(?:\.\d+)?)\s?(GB|MB|TB)/i);
+  if (sizeMatch) {
+    return `${sizeMatch[1]} ${sizeMatch[2].toUpperCase()}`;
+  }
+  return undefined;
+}
+
+function parseAudioCodec(title: string): string | undefined {
+  const lower = title.toLowerCase();
+  if (lower.includes("atmos")) return "Atmos";
+  if (lower.includes("truehd")) return "TrueHD";
+  if (lower.includes("dts-hd") || lower.includes("dts hd")) return "DTS-HD";
+  if (lower.includes("dts")) return "DTS";
+  if (lower.includes("eac3") || lower.includes("e-ac3") || lower.includes("dd+") || lower.includes("ddp")) return "EAC3";
+  if (lower.includes("ac3") || lower.includes("dd ") || lower.includes("dolby digital")) return "AC3";
+  if (lower.includes("aac")) return "AAC";
+  if (lower.includes("opus")) return "Opus";
+  if (lower.includes("flac")) return "FLAC";
+  return undefined;
+}
+
+function parseSeedsAndPeers(title: string): { seeds?: number; peers?: number } {
+  const seedsMatch = title.match(/👤\s*(\d+)/);
+  const seeds = seedsMatch ? parseInt(seedsMatch[1]) : undefined;
+  return { seeds };
+}
+
 function extractHost(url: string): string {
   try {
     const urlObj = new URL(url);
@@ -250,6 +282,10 @@ async function fetchStreamsFromAddon(
           finalUrl = `${proxyBase}/functions/v1/proxy-video?url=${encodeURIComponent(stream.url)}`;
         }
 
+        const fileSize = parseFileSize(label);
+        const audioCodec = parseAudioCodec(label);
+        const { seeds } = parseSeedsAndPeers(label);
+
         allStreams.push({
           url: finalUrl,
           kind,
@@ -262,6 +298,9 @@ async function fetchStreamsFromAddon(
           captions,
           infoHash: stream.infoHash,
           fileIdx: stream.fileIdx,
+          fileSize,
+          audioCodec,
+          seeds,
         });
       }
 

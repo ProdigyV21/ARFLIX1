@@ -2,7 +2,7 @@ export type Platform = 'web' | 'android_tv' | 'desktop' | 'ios';
 
 export type DeviceCapabilities = {
   platform: Platform;
-  maxHeight: number;
+  maxHeight: number | null;
   supportsHDR: boolean;
   supportsPiP: boolean;
   supportsCast: boolean;
@@ -54,7 +54,7 @@ export async function getDeviceCapabilities(): Promise<DeviceCapabilities> {
 
   const caps: DeviceCapabilities = {
     platform,
-    maxHeight: 2160,
+    maxHeight: null,
     supportsHDR: false,
     supportsPiP: 'pictureInPictureEnabled' in document,
     supportsCast: false,
@@ -119,7 +119,7 @@ export async function getDeviceCapabilities(): Promise<DeviceCapabilities> {
           },
         });
 
-        caps.maxHeight = supports1080.supported ? 1080 : 720;
+        // No longer limit max height - allow all resolutions
       }
 
       const supportsHDR10 = await navigator.mediaCapabilities.decodingInfo({

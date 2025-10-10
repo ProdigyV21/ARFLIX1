@@ -60,12 +60,31 @@ export default function SourceSelector({ streams, currentStream, onSelect, onClo
                       </span>
                     )}
 
+                    {stream.classification.videoCodec && (
+                      <span className="text-xs px-2 py-1 rounded bg-neutral-700 text-gray-300">
+                        {stream.classification.videoCodec.toUpperCase()}
+                      </span>
+                    )}
+
+                    {stream.classification.audioCodec && (
+                      <span className="text-xs px-2 py-1 rounded bg-neutral-700 text-gray-300">
+                        {stream.classification.audioCodec}
+                      </span>
+                    )}
+
                     {stream.classification.isHDR && (
                       <span className="text-xs px-2 py-1 rounded bg-purple-600/20 text-purple-400">
                         HDR
                       </span>
                     )}
                   </div>
+
+                  {(stream as any).fileSize && (
+                    <div className="mt-1 text-xs text-gray-400">
+                      Size: {(stream as any).fileSize}
+                      {(stream as any).seeds !== undefined && ` • Seeds: ${(stream as any).seeds}`}
+                    </div>
+                  )}
 
                   {!isPlayable && stream.classification.incompatibilityReasons.length > 0 && (
                     <div className="mt-2 text-xs text-red-400">
