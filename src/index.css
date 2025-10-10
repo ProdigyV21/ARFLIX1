@@ -1,0 +1,124 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter+Tight:wght@500;700;900&family=Urbanist:wght@600;800&display=swap');
+@import "./styles/aspect.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #000;
+  --bg-90: rgba(0, 0, 0, 0.9);
+  --fg: #F2F2F2;
+  --muted: #A5A5A5;
+  --accent: #12D8FF;
+  --accent-2: #E7FF55;
+  --radius-xl: 22px;
+  --ring: 0 0 0 2px rgba(18, 216, 255, 0.8), 0 0 24px rgba(18, 216, 255, 0.35);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html, body {
+    background: var(--bg);
+    color: var(--fg);
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+    font-family: 'Inter Tight', system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+@layer utilities {
+  .focus-ring {
+    outline: none;
+    transition: all 200ms ease;
+  }
+
+  .focus-ring:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.5);
+    outline-offset: 2px;
+  }
+
+  .focus-glow {
+    outline: none;
+    transition: all 200ms ease;
+  }
+
+  .focus-glow:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.5);
+    outline-offset: 2px;
+  }
+
+  [data-focusable="true"] {
+    @apply outline-none transition-all duration-200;
+  }
+
+  [data-focusable="true"]:focus-visible {
+    outline: 2px solid rgba(255, 255, 255, 0.5);
+    outline-offset: 2px;
+  }
+
+  .scroll-snap-x {
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .scroll-snap-child {
+    scroll-snap-align: start;
+  }
+
+  .text-shadow {
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.8);
+  }
+
+  .gradient-fade-b {
+    background: linear-gradient(to bottom, transparent 0%, rgba(0, 0, 0, 0.8) 100%);
+  }
+
+  .gradient-fade-t {
+    background: linear-gradient(to top, transparent 0%, rgba(0, 0, 0, 0.8) 100%);
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+video::cue {
+  color: #fff;
+  background: transparent !important;
+  text-shadow: 0 0 4px #000, 0 0 8px #000, 0 0 12px #000, 0 0 18px #000;
+  font-family: 'Inter Tight', system-ui;
+  font-weight: 600;
+  font-size: 1.5rem;
+  line-height: 1.4;
+}
+
+video::-webkit-media-text-track-container {
+  overflow: visible !important;
+  transform: translateY(-100px);
+  position: relative;
+  bottom: 100px;
+}
+
+video::-webkit-media-text-track-display {
+  overflow: visible !important;
+  width: 100%;
+  max-width: none !important;
+  padding: 0 5%;
+  box-sizing: border-box;
+}
+
+video::cue {
+  text-align: center;
+}

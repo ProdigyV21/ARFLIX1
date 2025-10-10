@@ -1,0 +1,226 @@
+import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, DELETE, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
+};
+
+async function checkHealth(url: string): Promise<{ status: string; message?: string; name?: string; version?: string }> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+    
+    const response = await fetch(url, {
+      headers: {
+        "Accept": "application/json",
+        "User-Agent": "ArFlix/1.0",
+      },
+      signal: controller.signal,
+    });
+    
+    clearTimeout(timeout);
+    
+    if (!response.ok) {
+      return { status: "error", message: `HTTP ${response.status}` };
+    }
+    
+    const data = await response.json();
+    
+    if (!data.id || !data.name || !data.version) {
+      return { status: "error", message: "Invalid manifest" };
+    }
+    
+    return { status: "ok", name: data.name, version: data.version };
+  } catch (error: any) {
+    if (error.name === "AbortError") {
+      return { status: "error", message: "Timeout" };
+    }
+    return { status: "error", message: error.message || "Unknown error" };
+  }
+}
+
+Deno.serve(async (req: Request) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 200, headers: corsHeaders });
+  }
+  
+  try {
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: "Missing authorization header" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") || "",
+      Deno.env.get("SUPABASE_ANON_KEY") || "",
+      { global: { headers: { Authorization: authHeader } } }
+    );
+    
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      return new Response(
+        JSON.stringify({ error: "Unauthorized" }),
+        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    const url = new URL(req.url);
+    const action = url.searchParams.get("action");
+    
+    if (req.method === "GET") {
+      if (action === "health") {
+        const addonUrl = url.searchParams.get("url");
+        if (!addonUrl) {
+          return new Response(
+            JSON.stringify({ error: "URL parameter required" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        const health = await checkHealth(addonUrl);
+        return new Response(
+          JSON.stringify(health),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      const { data: addons, error } = await supabase
+        .from("addons")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("order_position", { ascending: true });
+      
+      if (error) throw error;
+      
+      return new Response(
+        JSON.stringify({ addons: addons || [] }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    if (req.method === "POST") {
+      const body = await req.json();
+      
+      if (action === "toggle") {
+        const { url: addonUrl, enabled } = body;
+        
+        if (!addonUrl || typeof enabled !== "boolean") {
+          return new Response(
+            JSON.stringify({ error: "url and enabled (boolean) required" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        const { error } = await supabase
+          .from("addons")
+          .update({ enabled, updated_at: new Date().toISOString() })
+          .eq("user_id", user.id)
+          .eq("url", addonUrl);
+        
+        if (error) throw error;
+        
+        return new Response(
+          JSON.stringify({ success: true }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      if (action === "reorder") {
+        const { urls } = body;
+        
+        if (!Array.isArray(urls)) {
+          return new Response(
+            JSON.stringify({ error: "urls array required" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        for (let i = 0; i < urls.length; i++) {
+          await supabase
+            .from("addons")
+            .update({ order_position: i })
+            .eq("user_id", user.id)
+            .eq("url", urls[i]);
+        }
+        
+        return new Response(
+          JSON.stringify({ success: true }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      if (action === "health-check") {
+        const { url: addonUrl } = body;
+        
+        if (!addonUrl) {
+          return new Response(
+            JSON.stringify({ error: "url required" }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+        
+        const health = await checkHealth(addonUrl);
+        
+        await supabase
+          .from("addons")
+          .update({
+            last_health: health.status,
+            last_health_check: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("user_id", user.id)
+          .eq("url", addonUrl);
+        
+        return new Response(
+          JSON.stringify(health),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      return new Response(
+        JSON.stringify({ error: "Invalid action" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    if (req.method === "DELETE") {
+      const { url: addonUrl } = await req.json();
+      
+      if (!addonUrl) {
+        return new Response(
+          JSON.stringify({ error: "url required" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      
+      const { error } = await supabase
+        .from("addons")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("url", addonUrl);
+      
+      if (error) throw error;
+      
+      return new Response(
+        JSON.stringify({ success: true }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    
+    return new Response(
+      JSON.stringify({ error: "Method not allowed" }),
+      { status: 405, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  } catch (error: any) {
+    console.error("Manage error:", error);
+    return new Response(
+      JSON.stringify({ error: error.message || "Internal server error" }),
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+});
