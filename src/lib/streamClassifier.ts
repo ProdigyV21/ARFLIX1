@@ -112,6 +112,11 @@ export function classifyStream(
     }
   }
 
+  // Check URL directly for m3u8 (HLS)
+  if (url.includes('.m3u8') || url.includes('m3u8')) {
+    classification.container = 'm3u8';
+  }
+
   if (!classification.container) {
     for (const [container, pattern] of Object.entries(CODEC_PATTERNS.container)) {
       if (pattern.test(text)) {
@@ -183,9 +188,9 @@ function calculateCompatibilityScore(
     score += videoOk ? 50 : -500;
   }
 
-  // Container format preferences
+  // Container format preferences - HEAVILY prefer HLS for subtitle support
   if (classification.container === 'm3u8') {
-    score += 20;
+    score += 500; // Massive bonus for HLS (subtitle support)
   } else if (classification.container === 'mp4') {
     score += 15;
   }
