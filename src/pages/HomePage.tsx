@@ -81,72 +81,40 @@ export function HomePage({ onNavigate }: HomePageProps) {
     const enriched = await Promise.all(
       watching.map(async (item) => {
         try {
+          if (item.poster && item.backdrop) {
+            console.log(`[CW] Item "${item.title}" already has images, skipping`);
+            return item;
+          }
+
           const type: 'movie' | 'series' = item.type === 'anime' ? 'series' : item.type;
+          const isImdbId = item.id.startsWith('tt') && /^tt\d+$/.test(item.id);
 
-          const query = encodeURIComponent(item.title);
-          const searchUrl = `${BASE_URL}/catalog/${type}/top/search.json?search=${query}`;
+          if (isImdbId) {
+            console.log(`[CW] Fetching meta directly for IMDb ID: ${item.id}`);
+            const metaUrl = `${BASE_URL}/meta/${type}/${encodeURIComponent(item.id)}.json`;
+            const metaRes = await fetch(metaUrl);
 
-          console.log(`[CW] Searching Cinemeta for "${item.title}"`);
-          const searchRes = await fetch(searchUrl);
+            if (!metaRes.ok) {
+              console.error(`[CW] Failed to fetch meta for ${item.id}`);
+              return item;
+            }
 
-          if (!searchRes.ok) {
-            console.error(`[CW] Search failed for "${item.title}"`);
-            return item;
+            const metaData = await metaRes.json();
+            const meta = metaData.meta;
+
+            const enrichedItem: WatchProgress = {
+              ...item,
+              title: meta.name || item.title,
+              backdrop: meta.background || item.backdrop,
+              poster: meta.poster || item.poster
+            };
+
+            saveProgress(enrichedItem);
+            return enrichedItem;
           }
 
-          const searchData = await searchRes.json();
-          const metas = searchData.metas || [];
-
-          if (metas.length === 0) {
-            console.error(`[CW] No results found for "${item.title}"`);
-            return item;
-          }
-
-          const normalizeTitle = (title: string) =>
-            title.toLowerCase().replace(/[^\w\s]/g, '').replace(/\s+/g, ' ').trim();
-
-          const searchTerm = normalizeTitle(item.title);
-
-          let match = metas.find((m: any) => {
-            const metaTitle = normalizeTitle(m.name || '');
-            return metaTitle === searchTerm || metaTitle.includes(searchTerm) || searchTerm.includes(metaTitle);
-          });
-
-          if (!match) {
-            match = metas[0];
-            console.warn(`[CW] No exact match for "${item.title}", using first result: ${match.name}`);
-          }
-
-          const cinemetaId = match.id;
-
-          console.log(`[CW] Found match for "${item.title}": ${cinemetaId} (${match.name})`);
-
-          const metaUrl = `${BASE_URL}/meta/${type}/${encodeURIComponent(cinemetaId)}.json`;
-          const metaRes = await fetch(metaUrl);
-
-          if (!metaRes.ok) {
-            console.error(`[CW] Failed to fetch meta for ${cinemetaId}`);
-            return item;
-          }
-
-          const metaData = await metaRes.json();
-          const meta = metaData.meta;
-
-          console.log(`[CW] Got meta for "${item.title}":`, {
-            backdrop: meta.background,
-            poster: meta.poster
-          });
-
-          const enrichedItem: WatchProgress = {
-            ...item,
-            id: cinemetaId,
-            backdrop: meta.background || item.backdrop,
-            poster: meta.poster || item.poster
-          };
-
-          saveProgress(enrichedItem);
-
-          return enrichedItem;
+          console.log(`[CW] Invalid or missing ID for "${item.title}" (${item.id}), skipping`);
+          return item;
         } catch (error) {
           console.error(`[CW] Failed to enrich "${item.title}":`, error);
           return item;
