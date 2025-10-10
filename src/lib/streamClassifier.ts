@@ -329,9 +329,11 @@ export function selectPlayableSource(
   );
 
   console.log('[StreamClassifier] HLS streams found:', hlsStreams.length);
-  console.log('[StreamClassifier] Sample containers:', playable.slice(0, 5).map(s => ({
-    container: s.classification.container,
-    url: s.url.substring(0, 100)
+  console.log('[StreamClassifier] Sample streams:', playable.slice(0, 10).map(s => ({
+    title: s.title?.substring(0, 60),
+    score: s.classification.score,
+    audio: s.classification.audioCodec,
+    container: s.classification.container
   })));
 
   // Prioritize browser-compatible audio
@@ -353,14 +355,21 @@ export function selectPlayableSource(
     console.log('[StreamClassifier] Using HLS (any audio)');
     candidates = hlsStreams;
   } else if (withGoodAudio.length > 0) {
-    console.log('[StreamClassifier] Using good audio (no HLS available)');
+    console.log('[StreamClassifier] Using good audio (no HLS available), count:', withGoodAudio.length);
     candidates = withGoodAudio;
   } else {
     console.log('[StreamClassifier] Using any playable (fallback)');
     candidates = playable;
   }
 
+  // Sort by score (which includes quality, size, and codec bonuses)
   candidates.sort((a, b) => b.classification.score - a.classification.score);
+
+  console.log('[StreamClassifier] Top 5 candidates:', candidates.slice(0, 5).map(c => ({
+    title: c.title?.substring(0, 60),
+    score: c.classification.score,
+    audio: c.classification.audioCodec
+  })));
 
   console.log('[StreamClassifier] Best source:', {
     title: candidates[0].title,
