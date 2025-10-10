@@ -6,8 +6,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey",
 };
 
-const TMDB_API_KEY = Deno.env.get("TMDB_API_KEY") || "";
-
 interface Subtitle {
   id: string;
   language: string;
@@ -15,25 +13,6 @@ interface Subtitle {
   url: string;
   label: string;
   format: string;
-}
-
-async function getTMDBImdbId(tmdbId: string, type: string): Promise<string | null> {
-  if (!TMDB_API_KEY) return null;
-
-  try {
-    const endpoint = type === 'movie'
-      ? `https://api.themoviedb.org/3/movie/${tmdbId}/external_ids`
-      : `https://api.themoviedb.org/3/tv/${tmdbId}/external_ids`;
-
-    const response = await fetch(`${endpoint}?api_key=${TMDB_API_KEY}`);
-    if (!response.ok) return null;
-
-    const data = await response.json();
-    return data.imdb_id || null;
-  } catch (error) {
-    console.error('[subtitles] Failed to get IMDB ID:', error);
-    return null;
-  }
 }
 
 Deno.serve(async (req: Request) => {
@@ -49,51 +28,23 @@ Deno.serve(async (req: Request) => {
 
     if (!id) {
       return new Response(
-        JSON.stringify({ error: "Missing id parameter", subtitles: [] }),
+        JSON.stringify({ error: "Missing id parameter", subtitles: [], debug: 'no id' }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    // Handle both IMDb IDs (tt123456) and structured IDs (tmdb:movie:123)
-    let imdbId: string | null = null;
-
-    if (id.startsWith('tt')) {
-      // Direct IMDb ID
-      imdbId = id;
-      console.log('[subtitles] Using direct IMDb ID:', imdbId);
-    } else {
-      // Structured ID format
-      const [source, type, sourceId] = id.split(':');
-
-      if (source !== 'tmdb') {
-        return new Response(
-          JSON.stringify({ subtitles: [] }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
-
-      const tmdbId = sourceId;
-      imdbId = await getTMDBImdbId(tmdbId, type);
-    }
-
-    if (!imdbId) {
-      console.log('[subtitles] No IMDB ID found');
-      return new Response(
-        JSON.stringify({ subtitles: [] }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
-    console.log('[subtitles] Fetching from OpenSubtitles for IMDb ID:', imdbId, 'season:', season, 'episode:', episode);
-
+    // Extract IMDb ID
+    let imdbId = id.startsWith('tt') ? id.replace('tt', '') : id;
+    
     const subtitles: Subtitle[] = [];
+    let debugInfo: any = { imdbId, season, episode };
 
     try {
       const osUrl = (season && episode)
-        ? `https://rest.opensubtitles.org/search/episode-${episode}/imdbid-${imdbId.replace('tt', '')}/season-${season}/sublanguageid-all`
-        : `https://rest.opensubtitles.org/search/imdbid-${imdbId.replace('tt', '')}/sublanguageid-all`;
+        ? `https://rest.opensubtitles.org/search/episode-${episode}/imdbid-${imdbId}/season-${season}/sublanguageid-all`
+        : `https://rest.opensubtitles.org/search/imdbid-${imdbId}/sublanguageid-all`;
 
-      console.log('[subtitles] OpenSubtitles URL:', osUrl);
+      debugInfo.osUrl = osUrl;
 
       const osResponse = await fetch(osUrl, {
         headers: {
@@ -101,9 +52,16 @@ Deno.serve(async (req: Request) => {
         }
       });
 
+      debugInfo.status = osResponse.status;
+      debugInfo.statusText = osResponse.statusText;
+
       if (osResponse.ok) {
-        const osData = await osResponse.json();
-        console.log('[subtitles] OpenSubtitles returned', osData?.length || 0, 'results');
+        const responseText = await osResponse.text();
+        debugInfo.responseLength = responseText.length;
+        debugInfo.responsePreview = responseText.substring(0, 200);
+        
+        const osData = JSON.parse(responseText);
+        debugInfo.resultCount = Array.isArray(osData) ? osData.length : 'not-array';
 
         if (Array.isArray(osData) && osData.length > 0) {
           const seen = new Set<string>();
@@ -129,22 +87,20 @@ Deno.serve(async (req: Request) => {
           }
         }
       } else {
-        console.error('[subtitles] OpenSubtitles response not OK:', osResponse.status, osResponse.statusText);
+        const errorText = await osResponse.text();
+        debugInfo.errorText = errorText.substring(0, 200);
       }
-    } catch (osError) {
-      console.error('[subtitles] OpenSubtitles fetch failed:', osError);
+    } catch (osError: any) {
+      debugInfo.fetchError = osError.message || String(osError);
     }
 
-    console.log('[subtitles] Returning', subtitles.length, 'subtitles');
-
     return new Response(
-      JSON.stringify({ subtitles }),
+      JSON.stringify({ subtitles, debug: debugInfo }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error: any) {
-    console.error('[subtitles] Error:', error);
     return new Response(
-      JSON.stringify({ error: error.message || "Internal server error", subtitles: [] }),
+      JSON.stringify({ error: error.message || "Internal server error", subtitles: [], debug: 'fatal-error' }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
