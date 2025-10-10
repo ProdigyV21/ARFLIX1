@@ -125,9 +125,12 @@ function buildSeriesCandidates(
 
 function detectStreamKind(url: string): StreamKind {
   const lower = url.toLowerCase();
-  if (lower.includes(".m3u8") || lower.includes("m3u8") || lower.includes("/playback/")) return "hls";
+  // Check file extensions first (more specific)
+  if (lower.includes(".mp4") || lower.includes(".mkv") || lower.includes(".avi") || lower.includes(".webm")) return "mp4";
+  if (lower.includes(".m3u8") || lower.includes("m3u8")) return "hls";
   if (lower.includes(".mpd") || lower.includes("dash")) return "dash";
-  if (lower.includes(".mp4") || lower.includes(".mkv")) return "mp4";
+  // /playback/ could be either HLS or direct file, but default to HLS for streaming endpoints
+  if (lower.includes("/playback/")) return "hls";
   console.log(`[detectStreamKind] Unknown kind for URL: ${url.substring(url.length - 50)}`);
   return "unknown";
 }
