@@ -10,9 +10,7 @@ import { SettingsPage } from './pages/SettingsPage';
 import { SearchPage } from './pages/SearchPage';
 import { WatchlistPage } from './pages/WatchlistPage';
 import { addonAPI } from './lib/api';
-import type { Addon } from './lib/supabase';
-
-type Page = 'home' | 'search' | 'addons' | 'watchlist' | 'settings' | 'details' | 'player';
+import type { Page } from './types/navigation';
 
 interface PageState {
   page: Page;
@@ -21,7 +19,6 @@ interface PageState {
 
 function App() {
   const [pageHistory, setPageHistory] = useState<PageState[]>([{ page: 'home' }]);
-  const [addons, setAddons] = useState<Addon[]>([]);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [checkingOnboarding, setCheckingOnboarding] = useState(true);
 
@@ -47,7 +44,6 @@ function App() {
   async function loadAddons() {
     try {
       const { addons: data } = await addonAPI.list();
-      setAddons(data);
 
       if (data.length === 0 && checkingOnboarding) {
         setShowOnboarding(true);

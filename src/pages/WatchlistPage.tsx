@@ -4,9 +4,10 @@ import { ContentCard } from '../components/ContentCard';
 import { useFocusManager } from '../lib/focus';
 import { supabase } from '../lib/supabase';
 import type { WatchHistoryItem } from '../lib/supabase';
+import type { Page } from '../types/navigation';
 
 interface WatchlistPageProps {
-  onNavigate: (page: string, data?: any) => void;
+  onNavigate: (page: Page, data?: any) => void;
 }
 
 export function WatchlistPage({ onNavigate }: WatchlistPageProps) {

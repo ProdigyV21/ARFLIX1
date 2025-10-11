@@ -212,7 +212,7 @@ export function SettingsPage() {
                       <div className="flex gap-2">
                         <button
                           data-focusable="true"
-                          onClick={() => copyUrl(addon.manifest_url)}
+                        onClick={() => copyUrl(addon.manifest_url || addon.url)}
                           className="px-3 py-2 bg-white/10 hover:bg-white/20 rounded-lg transition-colors flex items-center gap-2"
                         >
                           <Copy className="w-4 h-4" />

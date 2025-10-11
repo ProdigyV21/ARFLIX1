@@ -133,12 +133,12 @@ export const catalogAPI = {
       const item = titleToCatalogItem(title);
       console.log('[Catalog] titleToCatalogItem returned item.type:', item.type);
 
-      const meta = {
+      const meta: MetaResponse['meta'] = {
         ...item,
         type: title.type === 'series' ? 'series' : 'movie',
         runtime: title.runtime,
         genres: title.genres,
-        imdbRating: title.rating?.toFixed(1),
+        imdbRating: title.rating !== undefined && title.rating !== null ? title.rating.toFixed(1) : undefined,
       };
       console.log('[Catalog] Final meta.type:', meta.type);
 

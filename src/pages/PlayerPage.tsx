@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { AlertCircle, ArrowLeft } from 'lucide-react';
-import { useMediaEngine, getAvailableQualities, setQuality, getCurrentQuality, getAudioTracks, setAudioTrack, type AttachResult } from '../lib/useMediaEngine';
+import { useMediaEngine, getAvailableQualities, setQuality, getCurrentQuality, /* getAudioTracks, setAudioTrack, type AttachResult */ } from '../lib/useMediaEngine';
 import type { NormalizedStream } from '../lib/player';
 import { PlayerControls } from '../components/player/PlayerControls';
 import { SettingsPanel } from '../components/player/SettingsPanel';
@@ -11,7 +11,6 @@ import { supabase } from '../lib/supabase';
 import { getDeviceCapabilities } from '../lib/deviceCapabilities';
 import { selectPlayableSource, type StreamWithClassification } from '../lib/streamClassifier';
 import IncompatibleSourceSheet from '../components/player/IncompatibleSourceSheet';
-import SourceSelector from '../components/player/SourceSelector';
 
 type PlayerPageProps = {
   contentId: string;
@@ -40,13 +39,13 @@ export function PlayerPage({
   const { engineRef, attach, destroy } = useMediaEngine();
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const hideControlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const wakeLockRef = useRef<any>(null);
+  // const wakeLockRef = useRef<any>(null);
 
   const [streams, setStreams] = useState<NormalizedStream[]>([]);
   const [classifiedStreams, setClassifiedStreams] = useState<StreamWithClassification[]>([]);
   const [currentStream, setCurrentStream] = useState<NormalizedStream | null>(null);
   const [showIncompatibleSheet, setShowIncompatibleSheet] = useState(false);
-  const [showSourceSelector, setShowSourceSelector] = useState(false);
+  // const [showSourceSelector, setShowSourceSelector] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -62,7 +61,6 @@ export function PlayerPage({
   const [controlsVisible, setControlsVisible] = useState(true);
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [hasAudio, setHasAudio] = useState<boolean | null>(null);
-  const [showAudioWarning, setShowAudioWarning] = useState(false);
   const [availableQualities, setAvailableQualities] = useState<(number | 'auto')[]>([]);
   const [currentQuality, setCurrentQuality] = useState<number | 'auto' | null>(null);
 
@@ -452,7 +450,7 @@ export function PlayerPage({
         caps
       );
 
-      const classified = response.items.map(s => ({
+      const classified = response.items.map((s: any) => ({
         url: s.url,
         title: s.title,
         quality: s.quality,
@@ -471,7 +469,7 @@ export function PlayerPage({
 
       console.log('[PlayerPage] Selected playable source:', playableSource.title);
 
-      const matchingStream = response.items.find(s => s.url === playableSource.url);
+      const matchingStream = response.items.find((s: any) => s.url === playableSource.url);
       if (matchingStream) {
         setCurrentStream(matchingStream);
       } else if (response.items.length > 0) {
@@ -520,7 +518,7 @@ export function PlayerPage({
           }
 
           setTimeout(() => {
-            const nextStream = streams.find(s => s.url !== stream.url);
+            const nextStream = streams.find((s: any) => s.url !== stream.url);
             if (nextStream) {
               initializePlayer(nextStream, video.currentTime);
             }
@@ -572,7 +570,7 @@ export function PlayerPage({
         console.log('[PlayerPage] Duration:', dur);
         console.log('[PlayerPage] Video dimensions:', video.videoWidth, 'x', video.videoHeight);
 
-        const audioTracks = video.audioTracks || (video as any).webkitAudioTracks;
+        const audioTracks = (video as any).audioTracks || (video as any).webkitAudioTracks;
         console.log('[PlayerPage] Audio tracks available:', audioTracks ? audioTracks.length : 'unknown');
         console.log('[PlayerPage] mozHasAudio:', (video as any).mozHasAudio);
         console.log('[PlayerPage] webkitAudioDecodedByteCount:', (video as any).webkitAudioDecodedByteCount);
@@ -628,7 +626,7 @@ export function PlayerPage({
 
         // Check audio info once playing starts
         setTimeout(() => {
-          const audioTracks = video.audioTracks || (video as any).webkitAudioTracks;
+          const audioTracks = (video as any).audioTracks || (video as any).webkitAudioTracks;
           const audioDecodedBytes = (video as any).webkitAudioDecodedByteCount;
           const hasAudioTrack = audioTracks && audioTracks.length > 0;
           const hasDecodedAudio = audioDecodedBytes && audioDecodedBytes > 0;
@@ -642,14 +640,12 @@ export function PlayerPage({
             console.log('[PlayerPage] ✅ VIDEO HAS AUDIO');
           } else {
             setHasAudio(false);
-            setShowAudioWarning(true);
+            // No visible warning; handled via stream classifier UI
             console.log('[PlayerPage] ❌ VIDEO HAS NO AUDIO TRACK');
             console.log('[PlayerPage] This file likely contains DTS/Atmos/AC3 audio which browsers cannot decode.');
             console.log('[PlayerPage] Try selecting a different quality/source with AAC or MP3 audio.');
 
-            setTimeout(() => {
-              setShowAudioWarning(false);
-            }, 5000);
+            // no-op
           }
         }, 2000);
       });

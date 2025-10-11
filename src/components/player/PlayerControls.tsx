@@ -1,6 +1,6 @@
 import { Play, Pause, SkipForward, SkipBack, Volume2, VolumeX, Maximize, Settings, Loader2 } from 'lucide-react';
 import { formatTime } from '../../lib/progress';
-import { useEffect, useRef, useState } from 'react';
+import { useRef, useState } from 'react';
 
 type PlayerControlsProps = {
   isPlaying: boolean;
@@ -45,10 +45,10 @@ export function PlayerControls({
   onMuteToggle,
   onFullscreen,
   onOpenSettings,
-  onNextEpisode,
+  onNextEpisode: _onNextEpisode,
 }: PlayerControlsProps) {
   const timelineRef = useRef<HTMLDivElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
+  // const [isDragging, setIsDragging] = useState(false);
   const [hoverTime, setHoverTime] = useState<number | null>(null);
 
   const progress = duration > 0 ? (currentTime / duration) * 100 : 0;

@@ -108,7 +108,7 @@ export async function getDeviceCapabilities(): Promise<DeviceCapabilities> {
       });
 
       if (!supports4K.supported) {
-        const supports1080 = await navigator.mediaCapabilities.decodingInfo({
+        await navigator.mediaCapabilities.decodingInfo({
           type: 'file',
           video: {
             contentType: 'video/mp4; codecs="avc1.640028"',

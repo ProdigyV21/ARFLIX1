@@ -1,13 +1,14 @@
 import { useEffect, useState, useRef } from 'react';
 import { Play, ArrowLeft, Loader2, Plus, Info, PlayCircle } from 'lucide-react';
 import { useFocusManager, useFocusable } from '../lib/focus';
-import { addonAPI, fetchSeasons, fetchEpisodes, fetchMeta } from '../lib/api';
+import { fetchSeasons, fetchEpisodes, fetchMeta } from '../lib/api';
+import type { Page } from '../types/navigation';
 
 interface DetailsPageProps {
   contentId: string;
   contentType: string;
   addonId?: string;
-  onNavigate: (page: string, data?: any) => void;
+  onNavigate: (page: Page, data?: any) => void;
   onBack: () => void;
 }
 
@@ -117,7 +118,7 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
       }
 
       console.log('[DetailsPage] Meta type:', metaData.type, 'ID:', metaData.id);
-      setMeta(metaData);
+      setMeta(metaData as any);
 
       if ((metaData.type === 'series' || metaData.type === 'anime') && metaData.id) {
         // For Cinemeta, ID is IMDB ID (tt1234567)
@@ -149,14 +150,14 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
           let validSeasons: Season[];
           if (seasonsData.seasons.length > 0 && typeof seasonsData.seasons[0] === 'number') {
             // Array of numbers format - convert to Season objects
-            validSeasons = seasonsData.seasons.map((num: number) => ({
+            validSeasons = (seasonsData.seasons as number[]).map((num: number) => ({
               seasonNumber: num,
               name: `Season ${num}`,
               episodeCount: 0,
             }));
           } else {
             // Array of Season objects format
-            validSeasons = seasonsData.seasons.filter((s: Season) => s.seasonNumber > 0);
+            validSeasons = (seasonsData.seasons as any[]).filter((s: any) => s.seasonNumber > 0) as Season[];
           }
           
           console.log('[DetailsPage] Loaded seasons:', validSeasons);
@@ -176,7 +177,7 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
             loadAnimeEpisodes(metaData.id);
           } else if (tmdbId) {
             const seasonsData = await fetchSeasons(tmdbId);
-            const validSeasons = seasonsData.seasons.filter((s: Season) => s.seasonNumber > 0);
+            const validSeasons = (seasonsData.seasons as any[]).filter((s: any) => s.seasonNumber > 0) as Season[];
             setSeasons(validSeasons);
             if (validSeasons.length > 0) {
               setSelectedSeason(validSeasons[0].seasonNumber);
