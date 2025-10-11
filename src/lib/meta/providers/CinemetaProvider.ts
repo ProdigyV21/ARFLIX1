@@ -212,9 +212,15 @@ export class CinemetaProvider implements MetadataProvider {
     const encodedQuery = encodeURIComponent(query.trim());
     const url = `${BASE_URL}/catalog/${type}/search=${encodedQuery}.json`;
 
+    console.log('[Cinemeta] Search URL:', url);
     try {
       const data: CinemetaResponse = await cachedFetch(url, SEARCH_TTL);
+      console.log('[Cinemeta] Search response:', data);
       const metas = data.metas || [];
+      console.log('[Cinemeta] Search results count:', metas.length);
+      if (metas.length > 0) {
+        console.log('[Cinemeta] First few results:', metas.slice(0, 3).map(m => m.name));
+      }
       return metas.map(mapToTitle);
     } catch (error) {
       console.error('[Cinemeta] search error:', error);

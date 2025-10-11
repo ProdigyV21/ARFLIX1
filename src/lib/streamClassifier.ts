@@ -162,23 +162,20 @@ function calculateCompatibilityScore(
     score += containerOk ? 100 : -1000;
   }
 
-  // Audio codec compatibility - prefer simple/compatible codecs
+  // Audio codec compatibility - minimal penalty for MKV since they're proxied
   if (classification.audioCodec) {
     const audioOk = isCapabilitySupported(classification.audioCodec, caps, 'audio');
 
     if (audioOk) {
-      score += 50; // Reduced from 100 to lower priority
-
-      // Bonus for more compatible audio codecs (prefer simpler audio)
-      if (classification.audioCodec === 'aac') {
-        score += 30;
-      } else if (classification.audioCodec === 'mp3') {
-        score += 25;
-      } else if (classification.audioCodec === 'opus') {
-        score += 20;
+      score += 50;
+      
+      // Small bonus for AAC/MP3 but don't prioritize it heavily
+      if (classification.audioCodec === 'aac' || classification.audioCodec === 'mp3') {
+        score += 10;
       }
     } else {
-      score -= 500; // Reduced penalty from -1000
+      // Small penalty for incompatible audio since backend will handle it
+      score -= 50; // Was -500, now much smaller
     }
   }
 
@@ -188,14 +185,18 @@ function calculateCompatibilityScore(
     score += videoOk ? 50 : -500;
   }
 
-  // Container format preferences - HEAVILY prefer HLS for subtitle support
-  if (classification.container === 'm3u8') {
-    score += 500; // Massive bonus for HLS (subtitle support)
+  // Container format preferences - HEAVILY prefer MKV for embedded subtitles
+  if (classification.container === 'mkv') {
+    score += 1000; // MASSIVE bonus for MKV (embedded subtitle support)
+    console.log('[StreamClassifier] 🎯 MKV container bonus: +1000 points');
+  } else if (classification.container === 'm3u8') {
+    score += 500; // HLS for subtitle support
   } else if (classification.container === 'mp4') {
-    score += 15;
+    score += 15; // MP4 is playable but no embedded subs
   }
 
-  // Resolution scoring - heavily prioritize higher resolution
+  // Resolution scoring - High priority but LESS than container preference
+  // We want MKV to win even if it's lower resolution
   const resolutionValue = {
     '4K': 2160,
     '1080p': 1080,
@@ -203,7 +204,10 @@ function calculateCompatibilityScore(
     '480p': 480
   }[classification.resolution || ''] || 1080;
 
-  // Multiply by 5 to make resolution differences more significant
+  // Reduced multiplier from 20 to 5 so MKV bonus (1000) beats resolution difference
+  // A 1080p MKV gets: base + 1000 (mkv) + 540 (resolution) = 1540
+  // A 4K MP4 gets: base + 15 (mp4) + 1080 (resolution) = 1095
+  // So MKV wins!
   score += (resolutionValue / 10) * 5;
 
   return score;
@@ -232,23 +236,26 @@ function checkIncompatibilities(
 ): string[] {
   const reasons: string[] = [];
 
-  if (classification.container && classification.container === 'mkv' && caps.platform === 'web') {
-    if (!isCapabilitySupported(classification.container, caps, 'container')) {
-      reasons.push('MKV container not supported in web browsers');
-    }
-  }
+  // MKV files are proxied by the backend, so they're playable
+  // No need to check MKV compatibility anymore
 
   if (classification.audioCodec) {
-    if (!isCapabilitySupported(classification.audioCodec, caps, 'audio')) {
+    // Allow all audio codecs since they'll be transcoded by the proxy if needed
+    // Only warn about truly incompatible ones
+    const incompatibleAudioCodecs = ['truehd', 'atmos', 'dtshd'];
+    if (incompatibleAudioCodecs.includes(classification.audioCodec)) {
       const audioName = classification.audioCodec.toUpperCase();
-      reasons.push(`${audioName} audio codec not supported by browser`);
+      reasons.push(`${audioName} audio may require transcoding`);
     }
   }
 
   if (classification.videoCodec) {
+    // Most video codecs are supported or will be transcoded
+    // Only check for truly problematic ones
     if (!isCapabilitySupported(classification.videoCodec, caps, 'video')) {
       const videoName = classification.videoCodec.toUpperCase();
-      reasons.push(`${videoName} video codec not supported`);
+      // Don't mark as incompatible, just log
+      console.log(`[StreamClassifier] ${videoName} video codec may require transcoding`);
     }
   }
 
@@ -323,62 +330,70 @@ export function selectPlayableSource(
     playable = filtered;
   }
 
-  // Prioritize HLS streams (they often have subtitle tracks)
-  const hlsStreams = playable.filter(s =>
-    s.classification.container === 'm3u8' || s.url.includes('.m3u8')
+  // ONLY use MKV streams if available (for embedded subtitles!)
+  const mkvStreams = playable.filter(s =>
+    s.classification.container === 'mkv' || s.url.toLowerCase().includes('.mkv')
   );
 
-  console.log('[StreamClassifier] HLS streams found:', hlsStreams.length);
-  console.log('[StreamClassifier] Sample streams:', playable.slice(0, 10).map(s => ({
-    title: s.title?.substring(0, 60),
-    score: s.classification.score,
-    audio: s.classification.audioCodec,
-    container: s.classification.container
-  })));
+  console.log('[StreamClassifier] 🎬 MKV streams found:', mkvStreams.length);
+  console.log('[StreamClassifier] Total playable streams:', playable.length);
+  
+  if (mkvStreams.length > 0) {
+    console.log('[StreamClassifier] Sample MKV streams:', mkvStreams.slice(0, 5).map(s => ({
+      title: s.title?.substring(0, 60),
+      score: s.classification.score,
+      audio: s.classification.audioCodec,
+      container: s.classification.container,
+      resolution: s.classification.resolution
+    })));
+  } else {
+    console.log('[StreamClassifier] ⚠️ NO MKV streams available - falling back to MP4');
+    console.log('[StreamClassifier] Sample streams:', playable.slice(0, 10).map(s => ({
+      title: s.title?.substring(0, 60),
+      score: s.classification.score,
+      audio: s.classification.audioCodec,
+      container: s.classification.container
+    })));
+  }
 
-  // Prioritize browser-compatible audio
-  const withGoodAudio = playable.filter(s =>
-    isBrowserPlayableAudio(s.title, s.classification.audioCodec)
-  );
-
-  // Prefer HLS + good audio, then HLS alone, then good audio, then anything playable
+  // Use MKV ONLY if available, otherwise fallback to any playable
   let candidates: typeof playable;
 
-  const hlsWithGoodAudio = hlsStreams.filter(s =>
-    isBrowserPlayableAudio(s.title, s.classification.audioCodec)
-  );
-
-  if (hlsWithGoodAudio.length > 0) {
-    console.log('[StreamClassifier] Using HLS with good audio');
-    candidates = hlsWithGoodAudio;
-  } else if (hlsStreams.length > 0) {
-    console.log('[StreamClassifier] Using HLS (any audio)');
-    candidates = hlsStreams;
-  } else if (withGoodAudio.length > 0) {
-    console.log('[StreamClassifier] Using good audio (no HLS available), count:', withGoodAudio.length);
-    candidates = withGoodAudio;
+  if (mkvStreams.length > 0) {
+    console.log('[StreamClassifier] 🎯 USING MKV STREAMS ONLY (embedded subtitles!)');
+    candidates = mkvStreams;
   } else {
-    console.log('[StreamClassifier] Using any playable (fallback)');
+    console.log('[StreamClassifier] ⚠️ No MKV streams - using fallback (no embedded subs)');
     candidates = playable;
   }
 
-  // Sort by score (which includes quality, size, and codec bonuses)
-  candidates.sort((a, b) => b.classification.score - a.classification.score);
+  // Filter out non-English content (foreign language audio tracks)
+  const foreignLanguageKeywords = ['FRENCH', 'SPANISH', 'GERMAN', 'ITALIAN', 'PORTUGUESE', 'RUSSIAN', 'JAPANESE', 'CHINESE', 'KOREAN', 'HINDI', 'ARABIC', 'TURKISH', 'POLISH', 'DUTCH', 'SWEDISH', 'NORWEGIAN', 'DANISH', 'FINNISH'];
+  const englishCandidates = candidates.filter(c => {
+    const title = c.title?.toUpperCase() || '';
+    return !foreignLanguageKeywords.some(lang => title.includes(lang));
+  });
 
-  console.log('[StreamClassifier] Top 5 candidates:', candidates.slice(0, 5).map(c => ({
+  // Use English candidates if available, otherwise fall back to all candidates
+  const finalCandidates = englishCandidates.length > 0 ? englishCandidates : candidates;
+
+  // Sort by score (which includes quality, size, and codec bonuses)
+  finalCandidates.sort((a, b) => b.classification.score - a.classification.score);
+
+  console.log('[StreamClassifier] Top 5 candidates:', finalCandidates.slice(0, 5).map(c => ({
     title: c.title?.substring(0, 60),
     score: c.classification.score,
     audio: c.classification.audioCodec
   })));
 
   console.log('[StreamClassifier] Best source:', {
-    title: candidates[0].title,
-    score: candidates[0].classification.score,
-    audio: candidates[0].classification.audioCodec,
-    container: candidates[0].classification.container
+    title: finalCandidates[0].title,
+    score: finalCandidates[0].classification.score,
+    audio: finalCandidates[0].classification.audioCodec,
+    container: finalCandidates[0].classification.container
   });
 
-  return candidates[0];
+  return finalCandidates[0];
 }
 
 export function getCodecBadge(classification: StreamClassification): { text: string; compatible: boolean } {
@@ -392,7 +407,7 @@ export function getCodecBadge(classification: StreamClassification): { text: str
   }
 
   if (classification.container === 'mkv') {
-    return { text: 'MKV 🚫 Web', compatible: false };
+    return { text: 'MKV 🎬 (Subs)', compatible: true }; // MKV is proxied and has embedded subs!
   }
 
   if (classification.container === 'm3u8') {

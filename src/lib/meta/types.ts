@@ -1,6 +1,12 @@
+export interface CastMember {
+  name: string;
+  character: string;
+  profileUrl?: string;
+}
+
 export interface Title {
   id: string;
-  source: 'cinemeta';
+  source: 'cinemeta' | 'tmdb';
   type: 'movie' | 'series';
   title: string;
   year?: number;
@@ -20,6 +26,10 @@ export interface Title {
     site: 'youtube' | 'web';
     keyOrUrl: string;
   }>;
+  releaseDate?: string; // ISO date string (YYYY-MM-DD)
+  cast?: CastMember[];
+  streamingServices?: string[];
+  trailerUrl?: string; // Direct YouTube URL for demo purposes
 }
 
 export interface Episode {

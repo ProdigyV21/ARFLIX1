@@ -10,12 +10,16 @@ export type CatalogItem = {
   backdrop?: string;
   rating?: number;
   popularity?: number;
-  source: 'cinemeta';
+  source: 'cinemeta' | 'tmdb';
   sourceRef: {
     tmdbId?: number;
     anilistId?: number;
     imdbId?: string;
   };
+  releaseDate?: string;
+  cast?: Array<{ name: string; character?: string; profile?: string | null; profileUrl?: string }>;
+  streamingServices?: string[];
+  trailerUrl?: string;
 };
 
 export type HomeRow = {
@@ -35,17 +39,23 @@ export type MetaResponse = {
   meta: CatalogItem & {
     runtime?: number;
     genres?: string[];
-    cast?: string[];
+    cast?: Array<{ name: string; character?: string; profile?: string | null; profileUrl?: string }>;
     director?: string;
     releaseInfo?: string;
     imdbRating?: string;
     logo?: string;
+    releaseDate?: string;
+    streamingServices?: string[];
+    trailerUrl?: string;
   };
 };
 
 function titleToCatalogItem(title: Title): CatalogItem {
+  // Use TMDB ID if available, otherwise fall back to the title ID
+  const id = title.externalIds.tmdb ? `tmdb:${title.externalIds.tmdb}` : title.id;
+  
   return {
-    id: title.externalIds.imdb || title.id,
+    id: id,
     type: title.type === 'series' ? 'series' : 'movie',
     title: title.title,
     year: title.year,
@@ -53,11 +63,15 @@ function titleToCatalogItem(title: Title): CatalogItem {
     poster: title.posterUrl,
     backdrop: title.backdropUrl,
     rating: title.rating,
-    source: 'cinemeta',
+    source: title.source,
     sourceRef: {
       imdbId: title.externalIds.imdb,
       tmdbId: title.externalIds.tmdb ? parseInt(title.externalIds.tmdb) : undefined,
     },
+    releaseDate: title.releaseDate,
+    cast: title.cast,
+    streamingServices: title.streamingServices,
+    trailerUrl: title.trailerUrl,
   };
 }
 
@@ -137,19 +151,27 @@ export const catalogAPI = {
 
   async search(query: string): Promise<{ results: CatalogItem[] }> {
     try {
+      console.log('[Catalog] search called with query:', query);
       if (!query.trim()) {
+        console.log('[Catalog] Empty query, returning empty results');
         return { results: [] };
       }
 
+      console.log('[Catalog] Calling metadataProvider.search for movies and series');
       const [movies, series] = await Promise.all([
         metadataProvider.search('movie', query),
         metadataProvider.search('series', query),
       ]);
 
+      console.log('[Catalog] Search results - movies:', movies.length, 'series:', series.length);
+      console.log('[Catalog] First few movie results:', movies.slice(0, 3).map(m => m.title));
+      console.log('[Catalog] First few series results:', series.slice(0, 3).map(s => s.title));
+
       const results = [...movies, ...series]
         .map(titleToCatalogItem)
         .slice(0, 50);
 
+      console.log('[Catalog] Final results count:', results.length);
       return { results };
     } catch (error) {
       console.error('[Catalog] search error:', error);

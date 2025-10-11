@@ -21,7 +21,8 @@ const SUBTITLE_LANGUAGES = [
 
 type Addon = {
   id: string;
-  manifest_url: string;
+  url: string;
+  manifest_url?: string; // Keeping for backwards compatibility
   name: string;
   enabled: boolean;
 };
@@ -35,6 +36,20 @@ export function SettingsPage() {
   const [addingAddon, setAddingAddon] = useState(false);
   const [addonError, setAddonError] = useState('');
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
+  
+  // Free subtitle addons that don't require API keys
+  const freeSubtitleAddons = [
+    {
+      name: 'OpenSubtitles (Official)',
+      url: 'https://opensubtitles-v3.strem.io/manifest.json',
+      description: 'Free subtitles from OpenSubtitles.org - No API key needed'
+    },
+    {
+      name: 'Subsource',
+      url: 'https://subsource.stremio.net/manifest.json',
+      description: 'Free subtitles from multiple sources'
+    }
+  ];
 
   useFocusManager(containerRef, {
     autofocus: true,
@@ -110,12 +125,13 @@ export function SettingsPage() {
     }
   }
 
-  async function removeAddon(manifestUrl: string) {
+  async function removeAddon(addonUrl: string) {
     try {
-      await addonAPI.remove(manifestUrl);
+      await addonAPI.remove(addonUrl);
       await loadAddons();
     } catch (error) {
       console.error('Failed to remove addon:', error);
+      alert('Failed to remove addon. Please try again.');
     }
   }
 
@@ -204,7 +220,7 @@ export function SettingsPage() {
                         </button>
                         <button
                           data-focusable="true"
-                          onClick={() => removeAddon(addon.manifest_url)}
+                          onClick={() => removeAddon(addon.url || addon.manifest_url || '')}
                           className="px-3 py-2 bg-red-500/20 hover:bg-red-500/30 text-red-400 rounded-lg transition-colors flex items-center gap-2"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -218,7 +234,40 @@ export function SettingsPage() {
             )}
 
             <div>
-              <h3 className="text-xl font-semibold mb-4">Add Another Add-on</h3>
+              <h3 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                <Languages className="w-6 h-6 text-blue-400" />
+                Free Subtitle Add-ons (No API Key Required)
+              </h3>
+              <div className="space-y-3 mb-6">
+                {freeSubtitleAddons.map((addon) => (
+                  <div
+                    key={addon.url}
+                    className="bg-blue-500/10 border border-blue-400/30 rounded-lg p-4 flex items-center justify-between gap-4"
+                  >
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-white mb-1">{addon.name}</h4>
+                      <p className="text-sm text-blue-300 mb-2">{addon.description}</p>
+                      <p className="text-xs text-muted-foreground truncate">{addon.url}</p>
+                    </div>
+                    <button
+                      data-focusable="true"
+                      onClick={() => {
+                        setNewAddonUrl(addon.url);
+                        addAddon();
+                      }}
+                      disabled={addingAddon || addons.some(a => a.url === addon.url || a.manifest_url === addon.url)}
+                      className="px-4 py-2 bg-blue-500 hover:bg-blue-600 disabled:bg-gray-600 disabled:opacity-50 text-white rounded-lg transition-colors flex items-center gap-2 whitespace-nowrap"
+                    >
+                      <Plus className="w-4 h-4" />
+                      {addons.some(a => a.url === addon.url || a.manifest_url === addon.url) ? 'Added' : 'Add'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <h3 className="text-xl font-semibold mb-4">Add Custom Add-on</h3>
               <p className="text-sm text-muted-foreground mb-3">
                 Paste a valid Stremio add-on URL (e.g., stremio://... or https://.../manifest.json)
               </p>

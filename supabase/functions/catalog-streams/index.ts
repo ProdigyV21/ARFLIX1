@@ -85,15 +85,17 @@ async function getExternalIds(type: string, sourceId: string): Promise<ExternalI
 function buildMovieCandidates(ext: ExternalIds, prefixes: string[]): string[] {
   const candidates: string[] = [];
 
-  if (prefixes.includes("tt") && ext.imdbId) {
+  // ALWAYS try IMDb first if available (most compatible)
+  if (ext.imdbId) {
     candidates.push(ext.imdbId);
   }
 
-  if (prefixes.includes("tmdb") && ext.tmdbMovieId) {
+  // Then try addon-specific prefixes
+  if (prefixes.includes("tmdb") && ext.tmdbMovieId && !ext.imdbId) {
     candidates.push(`tmdb:${ext.tmdbMovieId}`);
   }
 
-  if (prefixes.includes("tvdb") && ext.tvdbId) {
+  if (prefixes.includes("tvdb") && ext.tvdbId && !ext.imdbId) {
     candidates.push(`tvdb:${ext.tvdbId}`);
   }
 
@@ -108,15 +110,17 @@ function buildSeriesCandidates(
 ): string[] {
   const candidates: string[] = [];
 
-  if (prefixes.includes("tt") && ext.imdbId) {
+  // ALWAYS try IMDb first if available (most compatible)
+  if (ext.imdbId) {
     candidates.push(`${ext.imdbId}:${season}:${episode}`);
   }
 
-  if (prefixes.includes("tmdb") && ext.tmdbTvId) {
+  // Then try addon-specific prefixes
+  if (prefixes.includes("tmdb") && ext.tmdbTvId && !ext.imdbId) {
     candidates.push(`tmdb:${ext.tmdbTvId}:${season}:${episode}`);
   }
 
-  if (prefixes.includes("tvdb") && ext.tvdbId) {
+  if (prefixes.includes("tvdb") && ext.tvdbId && !ext.imdbId) {
     candidates.push(`tvdb:${ext.tvdbId}:${season}:${episode}`);
   }
 
@@ -225,7 +229,7 @@ async function fetchStreamsFromAddon(
       console.log(`Trying: ${streamUrl}`);
 
       const controller = new AbortController();
-      const timer = setTimeout(() => controller.abort(), 3500);
+      const timer = setTimeout(() => controller.abort(), 10000); // Increased to 10 seconds for AIOStreams
 
       const response = await fetch(streamUrl, {
         headers: { "Accept": "application/json", "User-Agent": "ArFlix/1.0" },
@@ -271,15 +275,19 @@ async function fetchStreamsFromAddon(
           mime: sub.url.endsWith(".vtt") ? "text/vtt" : undefined,
         }));
 
-        // Proxy MKV files and Real-Debrid direct links to avoid CORS issues
+        // For Torrentio URLs, just proxy them - the proxy will handle redirects
+        // Don't skip streams, let the user try them all
         let finalUrl = stream.url;
-        if (
-          stream.url.includes(".mkv") ||
-          stream.url.includes("real-debrid.com") ||
-          stream.url.includes("/playback/")
-        ) {
+        
+        // Proxy URLs that need CORS handling or redirect resolution
+        const shouldProxy = 
+          stream.url.includes("real-debrid.com") || 
+          stream.url.includes("torrentio.strem.fun/resolve/");
+        
+        if (shouldProxy) {
           const proxyBase = Deno.env.get("SUPABASE_URL") || "";
           finalUrl = `${proxyBase}/functions/v1/proxy-video?url=${encodeURIComponent(stream.url)}`;
+          console.log(`[STREAMS] Proxying URL: ${stream.url.substring(0, 60)}...`);
         }
 
         const fileSize = parseFileSize(label);
@@ -418,8 +426,20 @@ Deno.serve(async (req: Request) => {
       // Already an IMDB ID from Cinemeta
       externalIds.imdbId = id;
     } else if (id.startsWith('tmdb:')) {
-      // Fallback: try TMDB resolution
-      externalIds = await getExternalIds(type, id);
+      // Convert tmdb:ID to tmdb:movie:ID or tmdb:tv:ID format
+      const tmdbIdOnly = id.replace('tmdb:', '');
+      let formattedId = id;
+      
+      // If it's just tmdb:NUMBER, add the type prefix
+      if (!id.includes(':movie:') && !id.includes(':tv:')) {
+        if (type === 'movie') {
+          formattedId = `tmdb:movie:${tmdbIdOnly}`;
+        } else if (type === 'series' || type === 'anime') {
+          formattedId = `tmdb:tv:${tmdbIdOnly}`;
+        }
+      }
+      
+      externalIds = await getExternalIds(type, formattedId);
     } else {
       externalIds.imdbId = id;
     }
@@ -455,6 +475,11 @@ Deno.serve(async (req: Request) => {
       }
 
       console.log(`[STREAMS] Candidates for ${addon.name}:`, candidates);
+      console.log(`[STREAMS] External IDs resolved:`, {
+        imdbId: externalIds.imdbId,
+        tmdbTvId: externalIds.tmdbTvId,
+        tmdbMovieId: externalIds.tmdbMovieId
+      });
 
       if (candidates.length === 0) {
         console.log(`No candidates generated for ${addon.name} - skipping`);
@@ -465,9 +490,11 @@ Deno.serve(async (req: Request) => {
       if (baseUrl.endsWith("/manifest.json")) {
         baseUrl = baseUrl.replace(/\/manifest\.json$/, "");
       }
+      
+      console.log(`[STREAMS] Base URL for ${addon.name}: ${baseUrl}`);
 
       const addonStreams = await fetchStreamsFromAddon(baseUrl, type, candidates, addon.name);
-      console.log(`Found ${addonStreams.length} streams from ${addon.name}`);
+      console.log(`[STREAMS] Found ${addonStreams.length} streams from ${addon.name}`);
       items.push(...addonStreams);
     }
 

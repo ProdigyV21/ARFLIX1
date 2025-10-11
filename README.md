@@ -33,7 +33,47 @@ A modern, TV-optimized Progressive Web App featuring **live catalogs from TMDB, 
 
 ### Environment Variables
 
-Update `.env` with your API keys. TMDB is required, others optional.
+Create a `.env` file in the root directory with your API keys:
+
+```env
+# Supabase Configuration
+VITE_SUPABASE_URL=your_supabase_url_here
+VITE_SUPABASE_ANON_KEY=your_supabase_anon_key_here
+
+# TMDB API Key (for metadata and images)
+VITE_TMDB_API_KEY=your_tmdb_api_key_here
+```
+
+### Quick Start
+
+1. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+2. **Set up environment variables:**
+   - Copy `.env.example` to `.env`
+   - Add your Supabase URL and keys
+   - Add your TMDB API key
+
+3. **Run the development server:**
+   ```bash
+   npm run dev
+   ```
+
+4. **Access the app:**
+   - Open http://localhost:5173 in your browser
+   - Sign up for an account or sign in
+   - Browse the demo content (works without addons)
+   - Add Stremio addons in Settings > Add-ons to enable streaming
+
+### Demo Mode
+
+The app includes demo content that works without any configuration. You can:
+- Browse popular movies and TV shows
+- View details and metadata
+- See the interface and navigation
+- Add addons later for actual streaming
 
 ## Legal Notice
 

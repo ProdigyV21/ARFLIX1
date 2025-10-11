@@ -113,7 +113,7 @@ export function SearchPage({ onNavigate }: SearchPageProps) {
               <h2 className="text-3xl font-bold mb-6">
                 Movies ({movies.length})
               </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                 {movies.map((item) => (
                   <MediaCard16x9
                     key={item.id}
@@ -140,7 +140,7 @@ export function SearchPage({ onNavigate }: SearchPageProps) {
               <h2 className="text-3xl font-bold mb-6">
                 TV Shows ({tvShows.length})
               </h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6">
                 {tvShows.map((item) => (
                   <MediaCard16x9
                     key={item.id}

@@ -1,2 +1,2 @@
-export { cinemetaProvider as metadataProvider } from './providers/CinemetaProvider';
+export { tmdbProvider as metadataProvider } from './providers/TMDBProvider';
 export type { Title, Episode, MetadataProvider } from './types';

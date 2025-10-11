@@ -13,6 +13,430 @@ interface HomePageProps {
   onNavigate: (page: string, data?: any) => void;
 }
 
+async function getComprehensiveContent(): Promise<HomeRow[]> {
+  const { metadataProvider } = await import('../lib/meta');
+  
+  try {
+    console.log('[HomePage] Loading comprehensive content...');
+    
+    // Load all collections in parallel
+    const [
+      trendingMovies,
+      trendingTV,
+      mostWatchedMovies,
+      mostWatchedTV,
+      anime,
+      netflixMovies,
+      netflixTV,
+      disneyMovies,
+      disneyTV,
+      hboMovies,
+      hboTV,
+      amazonMovies,
+      amazonTV,
+      huluMovies,
+      huluTV,
+      koreanMovies,
+      koreanTV,
+      indianMovies,
+      indianTV,
+      spanishMovies,
+      spanishTV,
+      japaneseMovies,
+      japaneseTV,
+    ] = await Promise.all([
+        metadataProvider.getCatalog('movie', 'trending_movies', { limit: 25 }),
+        metadataProvider.getCatalog('series', 'trending_tv', { limit: 25 }),
+        metadataProvider.getCatalog('movie', 'most_watched', { limit: 25 }),
+        metadataProvider.getCatalog('series', 'most_watched', { limit: 25 }),
+        metadataProvider.getCatalog('series', 'anime', { limit: 25 }),
+        metadataProvider.getCatalog('movie', 'netflix', { limit: 25 }),
+        metadataProvider.getCatalog('series', 'netflix', { limit: 25 }),
+        metadataProvider.getCatalog('movie', 'disney', { limit: 25 }),
+        metadataProvider.getCatalog('series', 'disney', { limit: 25 }),
+        metadataProvider.getCatalog('movie', 'hbo', { limit: 25 }),
+        metadataProvider.getCatalog('series', 'hbo', { limit: 25 }),
+        metadataProvider.getCatalog('movie', 'amazon', { limit: 25 }),
+        metadataProvider.getCatalog('series', 'amazon', { limit: 25 }),
+        metadataProvider.getCatalog('movie', 'hulu', { limit: 25 }),
+        metadataProvider.getCatalog('series', 'hulu', { limit: 25 }),
+        metadataProvider.getCatalog('movie', 'korean', { limit: 25 }),
+        metadataProvider.getCatalog('series', 'korean', { limit: 25 }),
+        metadataProvider.getCatalog('movie', 'indian', { limit: 25 }),
+        metadataProvider.getCatalog('series', 'indian', { limit: 25 }),
+        metadataProvider.getCatalog('movie', 'spanish', { limit: 25 }),
+        metadataProvider.getCatalog('series', 'spanish', { limit: 25 }),
+        metadataProvider.getCatalog('movie', 'japanese', { limit: 25 }),
+        metadataProvider.getCatalog('series', 'japanese', { limit: 25 }),
+    ]);
+    
+    console.log('[HomePage] Loaded collections:', {
+      trendingMovies: trendingMovies.length,
+      trendingTV: trendingTV.length,
+      mostWatchedMovies: mostWatchedMovies.length,
+      mostWatchedTV: mostWatchedTV.length,
+      anime: anime.length,
+      netflixMovies: netflixMovies.length,
+      netflixTV: netflixTV.length,
+    });
+
+    const rows: HomeRow[] = [];
+
+    // Add collections only if they have content
+    if (trendingMovies.length > 0) {
+      rows.push({
+        id: 'trending-movies',
+        title: 'Trending Movies',
+        items: trendingMovies.map(title => ({
+          id: title.id,
+          type: title.type,
+          title: title.title,
+          year: title.year,
+          poster: title.posterUrl,
+          backdrop: title.backdropUrl,
+          rating: title.rating,
+        }))
+      });
+    }
+
+    if (trendingTV.length > 0) {
+      rows.push({
+        id: 'trending-tv',
+        title: 'Trending TV Shows',
+        items: trendingTV.map(title => ({
+          id: title.id,
+          type: title.type,
+          title: title.title,
+          year: title.year,
+          poster: title.posterUrl,
+          backdrop: title.backdropUrl,
+          rating: title.rating,
+        }))
+      });
+    }
+
+    if (mostWatchedTV.length > 0) {
+      rows.push({
+        id: 'most-watched-tv',
+        title: 'Most Watched This Week',
+        items: mostWatchedTV.map(title => ({
+          id: title.id,
+          type: title.type,
+          title: title.title,
+          year: title.year,
+          poster: title.posterUrl,
+          backdrop: title.backdropUrl,
+          rating: title.rating,
+        }))
+      });
+    }
+
+    if (anime.length > 0) {
+      rows.push({
+        id: 'trending-anime',
+        title: 'Trending Airing Anime',
+        items: anime.map(title => ({
+          id: title.id,
+          type: title.type,
+          title: title.title,
+          year: title.year,
+          poster: title.posterUrl,
+          backdrop: title.backdropUrl,
+          rating: title.rating,
+        }))
+      });
+    }
+
+    // Streaming Services
+    if (netflixTV.length > 0) {
+      rows.push({
+        id: 'netflix-trending',
+        title: 'Netflix Trending Series',
+        items: netflixTV.map(title => ({
+          id: title.id,
+          type: title.type,
+          title: title.title,
+          year: title.year,
+          poster: title.posterUrl,
+          backdrop: title.backdropUrl,
+          rating: title.rating,
+        }))
+      });
+    }
+
+    if (disneyTV.length > 0) {
+      rows.push({
+        id: 'disney-trending',
+        title: 'Disney+ Trending Series',
+        items: disneyTV.map(title => ({
+          id: title.id,
+          type: title.type,
+          title: title.title,
+          year: title.year,
+          poster: title.posterUrl,
+          backdrop: title.backdropUrl,
+          rating: title.rating,
+        }))
+      });
+    }
+
+    if (hboTV.length > 0) {
+      rows.push({
+        id: 'hbo-trending',
+        title: 'HBO Max Trending Series',
+        items: hboTV.map(title => ({
+          id: title.id,
+          type: title.type,
+          title: title.title,
+          year: title.year,
+          poster: title.posterUrl,
+          backdrop: title.backdropUrl,
+          rating: title.rating,
+        }))
+      });
+    }
+
+    if (amazonTV.length > 0) {
+      rows.push({
+        id: 'amazon-trending',
+        title: 'Prime Video Trending Series',
+        items: amazonTV.map(title => ({
+          id: title.id,
+          type: title.type,
+          title: title.title,
+          year: title.year,
+          poster: title.posterUrl,
+          backdrop: title.backdropUrl,
+          rating: title.rating,
+        }))
+      });
+    }
+
+    if (huluTV.length > 0) {
+      rows.push({
+        id: 'hulu-trending',
+        title: 'Hulu Trending Series',
+        items: huluTV.map(title => ({
+          id: title.id,
+          type: title.type,
+          title: title.title,
+          year: title.year,
+          poster: title.posterUrl,
+          backdrop: title.backdropUrl,
+          rating: title.rating,
+        }))
+      });
+    }
+
+    // International Content
+    if (koreanTV.length > 0) {
+      rows.push({
+        id: 'korean-tv',
+        title: 'Top Korean Series',
+        items: koreanTV.map(title => ({
+          id: title.id,
+          type: title.type,
+          title: title.title,
+          year: title.year,
+          poster: title.posterUrl,
+          backdrop: title.backdropUrl,
+          rating: title.rating,
+        }))
+      });
+    }
+
+    if (indianTV.length > 0) {
+      rows.push({
+        id: 'indian-tv',
+        title: 'Top Indian Series',
+        items: indianTV.map(title => ({
+          id: title.id,
+          type: title.type,
+          title: title.title,
+          year: title.year,
+          poster: title.posterUrl,
+          backdrop: title.backdropUrl,
+          rating: title.rating,
+        }))
+      });
+    }
+
+    if (spanishTV.length > 0) {
+      rows.push({
+        id: 'spanish-tv',
+        title: 'Top Spanish Series',
+        items: spanishTV.map(title => ({
+          id: title.id,
+          type: title.type,
+          title: title.title,
+          year: title.year,
+          poster: title.posterUrl,
+          backdrop: title.backdropUrl,
+          rating: title.rating,
+        }))
+      });
+    }
+
+    if (japaneseTV.length > 0) {
+      rows.push({
+        id: 'japanese-tv',
+        title: 'Top Japanese Series',
+        items: japaneseTV.map(title => ({
+          id: title.id,
+          type: title.type,
+          title: title.title,
+          year: title.year,
+          poster: title.posterUrl,
+          backdrop: title.backdropUrl,
+          rating: title.rating,
+        }))
+      });
+    }
+
+    // Top Movies from different countries
+    if (koreanMovies.length > 0) {
+      rows.push({
+        id: 'korean-movies',
+        title: 'Top Korean Movies',
+        items: koreanMovies.map(title => ({
+          id: title.id,
+          type: title.type,
+          title: title.title,
+          year: title.year,
+          poster: title.posterUrl,
+          backdrop: title.backdropUrl,
+          rating: title.rating,
+        }))
+      });
+    }
+
+    if (indianMovies.length > 0) {
+      rows.push({
+        id: 'indian-movies',
+        title: 'Top Indian Movies',
+        items: indianMovies.map(title => ({
+          id: title.id,
+          type: title.type,
+          title: title.title,
+          year: title.year,
+          poster: title.posterUrl,
+          backdrop: title.backdropUrl,
+          rating: title.rating,
+        }))
+      });
+    }
+
+    if (spanishMovies.length > 0) {
+      rows.push({
+        id: 'spanish-movies',
+        title: 'Top Spanish Movies',
+        items: spanishMovies.map(title => ({
+          id: title.id,
+          type: title.type,
+          title: title.title,
+          year: title.year,
+          poster: title.posterUrl,
+          backdrop: title.backdropUrl,
+          rating: title.rating,
+        }))
+      });
+    }
+
+    if (japaneseMovies.length > 0) {
+      rows.push({
+        id: 'japanese-movies',
+        title: 'Top Japanese Movies',
+        items: japaneseMovies.map(title => ({
+          id: title.id,
+          type: title.type,
+          title: title.title,
+          year: title.year,
+          poster: title.posterUrl,
+          backdrop: title.backdropUrl,
+          rating: title.rating,
+        }))
+      });
+    }
+
+    console.log('[HomePage] Returning comprehensive content rows:', rows.length);
+    return rows;
+  } catch (error) {
+    console.error('Failed to load comprehensive content:', error);
+    return getFallbackContent();
+  }
+}
+
+function getFallbackContent(): HomeRow[] {
+  return [
+    {
+      id: 'trending-movies',
+      title: 'Trending Movies',
+      items: [
+        {
+          id: 'tmdb:27205',
+          type: 'movie',
+          title: 'Inception',
+          year: 2010,
+          poster: 'https://image.tmdb.org/t/p/w500/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg',
+          backdrop: 'https://image.tmdb.org/t/p/w1280/s3TBrRGB1iav7gFOCNx3H31MoES.jpg',
+          rating: 8.4
+        },
+        {
+          id: 'tmdb:155',
+          type: 'movie',
+          title: 'The Dark Knight',
+          year: 2008,
+          poster: 'https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg',
+          backdrop: 'https://image.tmdb.org/t/p/w1280/hqkIcbrOHL86UncnHIsHVcVmzue.jpg',
+          rating: 9.0
+        },
+        {
+          id: 'tmdb:49026',
+          type: 'movie',
+          title: 'The Dark Knight Rises',
+          year: 2012,
+          poster: 'https://image.tmdb.org/t/p/w500/vdAQxOnsxhgc6e1nxdV1nQiVYAX.jpg',
+          backdrop: 'https://image.tmdb.org/t/p/w1280/85zHakxSGU6hP3TpUj8x3QdW2bZ.jpg',
+          rating: 8.2
+        }
+      ]
+    },
+    {
+      id: 'trending-tv',
+      title: 'Trending TV Shows',
+      items: [
+        {
+          id: 'tmdb:1399',
+          type: 'series',
+          title: 'Game of Thrones',
+          year: 2011,
+          poster: 'https://image.tmdb.org/t/p/w500/u3bZgnGQ9T01sWNhyveQz0wH0Hl.jpg',
+          backdrop: 'https://image.tmdb.org/t/p/w1280/2OMB0ynKlyIenMJWI2Dy9IWT4c.jpg',
+          rating: 8.5
+        },
+        {
+          id: 'tmdb:1396',
+          type: 'series',
+          title: 'Breaking Bad',
+          year: 2008,
+          poster: 'https://image.tmdb.org/t/p/w500/ggFHVNu6YYI5L9pCfOacjizRGt.jpg',
+          backdrop: 'https://image.tmdb.org/t/p/w1280/tsRy63Mu5cu8etL1X7ZLyf7UP1M.jpg',
+          rating: 9.5
+        },
+        {
+          id: 'tmdb:1398',
+          type: 'series',
+          title: 'The Sopranos',
+          year: 1999,
+          poster: 'https://image.tmdb.org/t/p/w500/rTc7ZXdroqjkKivFPvCPX0Ru7uw.jpg',
+          backdrop: 'https://image.tmdb.org/t/p/w1280/7c9UVPPiTPltouxRVY6N9uugaVA.jpg',
+          rating: 9.2
+        }
+      ]
+    }
+  ];
+}
+
 export function HomePage({ onNavigate }: HomePageProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const watchRef = useRef<HTMLButtonElement>(null);
@@ -59,17 +483,40 @@ export function HomePage({ onNavigate }: HomePageProps) {
     try {
       setLoading(true);
 
-      const [catalogData, addonsData, enrichedWatching] = await Promise.all([
-        catalogAPI.getHome(),
+      const [catalogData, addonsData, enrichedWatching, comprehensiveContent] = await Promise.all([
+        catalogAPI.getHome().catch(() => ({ rows: [] })),
         addonAPI.list().catch(() => ({ addons: [] })),
         enrichContinueWatchingImages(getContinueWatching(20)),
+        getComprehensiveContent(),
       ]);
 
-      setRows(catalogData.rows || []);
+      // Use comprehensive content if available, otherwise fall back to catalog data or demo content
+      console.log('[HomePage] Content loading results:', {
+        comprehensiveContentLength: comprehensiveContent.length,
+        catalogDataRowsLength: catalogData.rows?.length || 0,
+        comprehensiveContent: comprehensiveContent,
+        catalogData: catalogData
+      });
+      
+      if (comprehensiveContent.length > 0) {
+        console.log('[HomePage] Using comprehensive content');
+        setRows(comprehensiveContent);
+      } else if (catalogData.rows && catalogData.rows.length > 0) {
+        console.log('[HomePage] Using catalog data');
+        setRows(catalogData.rows);
+      } else {
+        console.log('[HomePage] Using fallback content');
+        setRows(getFallbackContent());
+      }
+      
       setHasAddons(addonsData.addons?.filter((a: any) => a.enabled).length > 0);
       setContinueWatching(enrichedWatching);
     } catch (error) {
       console.error('Failed to load content:', error);
+      // Show fallback content if everything fails
+      setRows(getFallbackContent());
+      setHasAddons(false);
+      setContinueWatching([]);
     } finally {
       setLoading(false);
     }
@@ -224,11 +671,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
                       year: item.year?.toString()
                     }}
                     onClick={() => {
-                      if (hasAddons) {
-                        handleItemClick(item);
-                      } else {
-                        onNavigate('settings');
-                      }
+                      handleItemClick(item);
                     }}
                   />
                 </div>

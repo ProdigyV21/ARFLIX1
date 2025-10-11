@@ -85,6 +85,30 @@ export function AuthWrapper({ children }: AuthWrapperProps) {
             </p>
           </div>
 
+          {/* Temporary demo mode button */}
+          <div className="mb-6 p-4 bg-blue-500/20 border border-blue-500/50 rounded-lg">
+            <p className="text-blue-200 text-sm mb-3">
+              For testing purposes, you can try the demo mode:
+            </p>
+            <button
+              onClick={() => {
+                // Create a mock user for demo purposes
+                const mockUser = {
+                  id: 'demo-user',
+                  email: 'demo@example.com',
+                  user_metadata: {},
+                  app_metadata: {},
+                  aud: 'authenticated',
+                  created_at: new Date().toISOString(),
+                } as any;
+                setUser(mockUser);
+              }}
+              className="w-full py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+            >
+              Try Demo Mode
+            </button>
+          </div>
+
           <div className="bg-secondary/50 backdrop-blur rounded-lg p-8">
             <h2 className="text-2xl font-semibold mb-6">
               {isSignUp ? 'Create Account' : 'Sign In'}

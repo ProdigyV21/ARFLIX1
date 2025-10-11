@@ -49,6 +49,7 @@ export default function MediaCard16x9({ item, onClick, showTitle = false }: Medi
             <div className="absolute bottom-0 left-0 right-0 p-4 pointer-events-none">
               <h3 className="text-white font-bold text-base line-clamp-2 drop-shadow-lg">
                 {item.title}
+                {item.year && <span className="text-white/70 font-normal"> ({item.year})</span>}
               </h3>
             </div>
           </>

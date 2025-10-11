@@ -5,12 +5,17 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "GET, HEAD, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Client-Info, Apikey, Range",
   "Access-Control-Expose-Headers": "Content-Length, Content-Range, Accept-Ranges",
+  "Access-Control-Allow-Credentials": "true",
 };
 
 Deno.serve(async (req: Request) => {
+  // Allow OPTIONS preflight
   if (req.method === "OPTIONS") {
     return new Response(null, { status: 200, headers: corsHeaders });
   }
+  
+  // Allow anonymous access for video proxying
+  // Video players can't send auth headers, so we need to allow anonymous requests
 
   try {
     const url = new URL(req.url);

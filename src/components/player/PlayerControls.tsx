@@ -90,48 +90,12 @@ export function PlayerControls({
         )}
       </div>
 
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 flex items-center gap-8">
-        <button
-          data-focusable="true"
-          onClick={onSkipBack}
-          className="w-16 h-16 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center transition-all hover:scale-110 focus:outline-none focus:ring-4 focus:ring-white/50"
-        >
-          <SkipBack className="w-8 h-8" />
-        </button>
-
-        <button
-          data-focusable="true"
-          onClick={onPlayPause}
-          className="w-20 h-20 rounded-full bg-white/90 hover:bg-white text-black flex items-center justify-center transition-all hover:scale-110 focus:outline-none focus:ring-4 focus:ring-white/50"
-        >
-          {isBuffering ? (
-            <Loader2 className="w-10 h-10 animate-spin" />
-          ) : isPlaying ? (
-            <Pause className="w-10 h-10" fill="currentColor" />
-          ) : (
-            <Play className="w-10 h-10 ml-1" fill="currentColor" />
-          )}
-        </button>
-
-        <button
-          data-focusable="true"
-          onClick={onSkipForward}
-          className="w-16 h-16 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center transition-all hover:scale-110 focus:outline-none focus:ring-4 focus:ring-white/50"
-        >
-          <SkipForward className="w-8 h-8" />
-        </button>
-
-        {onNextEpisode && (
-          <button
-            data-focusable="true"
-            onClick={onNextEpisode}
-            className="px-6 py-3 rounded-lg bg-black/60 hover:bg-black/80 flex items-center gap-2 transition-all hover:scale-105 focus:outline-none focus:ring-4 focus:ring-white/50"
-          >
-            <span className="font-medium">Next Episode</span>
-            <SkipForward className="w-5 h-5" />
-          </button>
-        )}
-      </div>
+      {/* Show buffering spinner in center when buffering */}
+      {isBuffering && (
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+          <Loader2 className="w-16 h-16 animate-spin text-white" />
+        </div>
+      )}
 
       <div className="absolute bottom-0 left-0 right-0 p-6">
         <div
@@ -161,7 +125,35 @@ export function PlayerControls({
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
-            <span className="text-sm">
+            <button
+              data-focusable="true"
+              onClick={onSkipBack}
+              className="w-10 h-10 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-white/50"
+            >
+              <SkipBack className="w-5 h-5" />
+            </button>
+
+            <button
+              data-focusable="true"
+              onClick={onPlayPause}
+              className="w-10 h-10 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-white/50"
+            >
+              {isPlaying ? (
+                <Pause className="w-5 h-5" fill="currentColor" />
+              ) : (
+                <Play className="w-5 h-5 ml-0.5" fill="currentColor" />
+              )}
+            </button>
+
+            <button
+              data-focusable="true"
+              onClick={onSkipForward}
+              className="w-10 h-10 rounded-full hover:bg-white/10 flex items-center justify-center transition-colors focus:outline-none focus:ring-2 focus:ring-white/50"
+            >
+              <SkipForward className="w-5 h-5" />
+            </button>
+
+            <span className="text-sm ml-2">
               {formatTime(currentTime)} / {formatTime(duration)}
             </span>
           </div>

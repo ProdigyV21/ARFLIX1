@@ -202,22 +202,22 @@ export function SettingsPanel({
                   No subtitles available for this stream.
                 </div>
               ) : (
-                subtitleOptions.map((sub) => {
+                subtitleOptions.map((sub, index) => {
                   const isSubtitle = 'languageCode' in sub;
-                  const subLang = isSubtitle ? sub.languageCode : sub.lang;
+                  const subId = isSubtitle ? (sub.id || `sub-${index}`) : sub.lang;
                   const subLabel = isSubtitle ? sub.label : sub.lang;
 
                   return (
                     <button
-                      key={isSubtitle ? sub.id : sub.lang}
+                      key={subId}
                       data-focusable="true"
-                      onClick={() => onSubtitleChange(subLang)}
+                      onClick={() => onSubtitleChange(subId)}
                       className={`w-full p-4 rounded-lg flex items-center justify-between transition-all hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/50 ${
-                        currentSubtitle === subLang ? 'bg-white/10' : ''
+                        currentSubtitle === subId ? 'bg-white/10' : ''
                       }`}
                     >
                       <span className="font-medium">{subLabel}</span>
-                      {currentSubtitle === subLang && <Check className="w-5 h-5" />}
+                      {currentSubtitle === subId && <Check className="w-5 h-5" />}
                     </button>
                   );
                 })

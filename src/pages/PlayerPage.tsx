@@ -6,7 +6,7 @@ import { PlayerControls } from '../components/player/PlayerControls';
 import { SettingsPanel } from '../components/player/SettingsPanel';
 import { saveProgress, getProgress, shouldShowResumePrompt, WatchProgress } from '../lib/progress';
 import { fetchStreams } from '../lib/api';
-import { fetchSubtitles, type Subtitle } from '../lib/subtitles';
+import { type Subtitle } from '../lib/subtitles';
 import { supabase } from '../lib/supabase';
 import { getDeviceCapabilities } from '../lib/deviceCapabilities';
 import { selectPlayableSource, type StreamWithClassification } from '../lib/streamClassifier';
@@ -70,7 +70,7 @@ export function PlayerPage({
   const [resumeTime, setResumeTime] = useState(0);
 
   const [subtitlesEnabled, setSubtitlesEnabled] = useState(false);
-  const [currentSubtitle, setCurrentSubtitle] = useState<string | undefined>();
+  const [currentSubtitle, setCurrentSubtitle] = useState<string | undefined>(); // Store subtitle ID, not language
   const [availableSubtitles, setAvailableSubtitles] = useState<Subtitle[]>([]);
   const [preferredSubtitleLang, setPreferredSubtitleLang] = useState<string>('en');
 
@@ -80,8 +80,13 @@ export function PlayerPage({
 
   useEffect(() => {
     loadUserPreferences();
-    loadSubtitles();
   }, [contentId, seasonNumber, episodeNumber]);
+
+  useEffect(() => {
+    if (currentStream) {
+      loadSubtitles();
+    }
+  }, [currentStream, contentId, seasonNumber, episodeNumber]);
 
   useEffect(() => {
     if (availableSubtitles.length > 0 && videoRef.current) {
@@ -111,14 +116,100 @@ export function PlayerPage({
 
   async function loadSubtitles() {
     try {
-      console.log('[PlayerPage] ===== FETCHING SUBTITLES START =====');
-      console.log('[PlayerPage] Content ID:', contentId);
-      const subs = await fetchSubtitles(contentId, seasonNumber, episodeNumber);
-      console.log('[PlayerPage] ===== FETCHED', subs.length, 'SUBTITLES =====');
-      console.log('[PlayerPage] All subtitle URLs:', subs.map(s => ({ lang: s.languageCode, url: s.url })));
-      setAvailableSubtitles(subs);
-      console.log('[PlayerPage] Loaded', subs.length, 'subtitle tracks');
-      console.log('[PlayerPage] Sample fetched subtitle:', subs[0]);
+      console.log('[PlayerPage] ===== LOADING SUBTITLES FROM STREAM =====');
+      
+      // Get subtitles from the current stream (embedded or external)
+      if (currentStream?.captions && currentStream.captions.length > 0) {
+        console.log('[PlayerPage] Found', currentStream.captions.length, 'subtitle tracks in stream');
+        const streamSubs: Subtitle[] = currentStream.captions.map((cap, index) => ({
+          id: `stream-${cap.lang}-${index}`,
+          language: cap.lang.toUpperCase(),
+          languageCode: cap.lang,
+          label: cap.lang.toUpperCase(),
+          url: cap.url,
+          format: cap.mime === 'embedded' ? 'embedded' : 'vtt'
+        }));
+        setAvailableSubtitles(streamSubs);
+        console.log('[PlayerPage] Loaded stream subtitles:', streamSubs);
+        return;
+      }
+
+      // Fallback: Use OpenSubtitles Stremio addon directly (free, no API key!)
+      console.log('[PlayerPage] No stream subtitles, trying OpenSubtitles v3 Stremio addon...');
+      try {
+        // Try OpenSubtitles v3 Stremio addon directly
+        // This is a free public addon, no user auth needed!
+        let subtitleId = contentId;
+        
+        // Format for series: imdbId:season:episode
+        if (seasonNumber && episodeNumber) {
+          // Need to resolve TMDB to IMDb
+          if (contentId.startsWith('tmdb:')) {
+            const tmdbId = contentId.replace('tmdb:', '').replace(/^(movie|tv):/, '');
+            const tmdbApiKey = import.meta.env.VITE_TMDB_API_KEY || '080380c1ad7b3967af3def25159e4374';
+            const tmdbUrl = `https://api.themoviedb.org/3/tv/${tmdbId}/external_ids?api_key=${tmdbApiKey}`;
+            
+            console.log('[PlayerPage] Resolving TMDB to IMDb:', tmdbUrl);
+            
+            try {
+              const tmdbResponse = await fetch(tmdbUrl);
+              if (tmdbResponse.ok) {
+                const externalIds = await tmdbResponse.json();
+                if (externalIds.imdb_id) {
+                  subtitleId = `${externalIds.imdb_id}:${seasonNumber}:${episodeNumber}`;
+                  console.log('[PlayerPage] Resolved to:', subtitleId);
+                }
+              }
+            } catch (e) {
+              console.log('[PlayerPage] TMDB resolution failed:', e);
+            }
+          } else if (contentId.startsWith('tt')) {
+            subtitleId = `${contentId}:${seasonNumber}:${episodeNumber}`;
+          }
+        }
+        
+        const openSubsUrl = `https://opensubtitles-v3.strem.io/subtitles/${seasonNumber ? 'series' : 'movie'}/${encodeURIComponent(subtitleId)}.json`;
+        console.log('[PlayerPage] 🎬 Fetching from OpenSubtitles addon:', openSubsUrl);
+        
+        const response = await fetch(openSubsUrl, {
+          headers: { "Accept": "application/json" },
+          signal: AbortSignal.timeout(8000),
+        });
+        
+        console.log('[PlayerPage] OpenSubtitles addon response status:', response.status);
+        
+        if (response.ok) {
+          const data = await response.json();
+          console.log('[PlayerPage] OpenSubtitles addon response:', JSON.stringify(data).substring(0, 300));
+          
+          if (data.subtitles && Array.isArray(data.subtitles) && data.subtitles.length > 0) {
+            const mappedSubs: Subtitle[] = data.subtitles.map((sub: any, index: number) => ({
+              id: sub.id || `opensub-${sub.lang}-${index}`,
+              language: sub.lang?.toUpperCase() || 'EN',
+              languageCode: sub.lang || 'en',
+              label: `${sub.lang?.toUpperCase() || 'EN'} (OpenSubtitles)`,
+              url: sub.url,
+              format: sub.url.endsWith('.vtt') ? 'vtt' : 'srt'
+            }));
+            
+            console.log('[PlayerPage] ✅ Found', mappedSubs.length, 'subtitles from OpenSubtitles addon!');
+            console.log('[PlayerPage] Subtitle details:', mappedSubs.map(s => ({ id: s.id, label: s.label, url: s.url })));
+            setAvailableSubtitles(mappedSubs);
+            return;
+          } else {
+            console.log('[PlayerPage] ⚠️ OpenSubtitles addon returned no subtitles');
+            console.log('[PlayerPage] Response structure:', Object.keys(data));
+          }
+        } else {
+          console.log('[PlayerPage] ❌ OpenSubtitles addon fetch failed:', response.status);
+          try {
+            const errorText = await response.text();
+            console.log('[PlayerPage] Error response:', errorText.substring(0, 200));
+          } catch {}
+        }
+      } catch (error) {
+        console.log('[PlayerPage] Subtitle fetch error:', error);
+      }
     } catch (error) {
       console.error('Failed to load subtitles:', error);
     }
@@ -139,48 +230,77 @@ export function PlayerPage({
     // Check video element text tracks (embedded in video file or from HLS manifest)
     setTimeout(() => {
       const tracks = video.textTracks;
-      console.log('[PlayerPage] Video element has', tracks.length, 'embedded text tracks');
+      console.log('[PlayerPage] === DETAILED TEXT TRACK ANALYSIS ===');
+      console.log('[PlayerPage] Total text tracks:', tracks.length);
+      console.log('[PlayerPage] Video src:', video.src?.substring(0, 100));
+      console.log('[PlayerPage] Video readyState:', video.readyState);
+      console.log('[PlayerPage] Video duration:', video.duration);
 
       const embeddedSubs: typeof availableSubtitles = [];
 
       for (let i = 0; i < tracks.length; i++) {
         const track = tracks[i];
-        console.log(`[PlayerPage] Embedded track ${i}:`, {
+        console.log(`[PlayerPage] Track ${i}:`, {
           kind: track.kind,
           label: track.label,
           language: track.language,
-          mode: track.mode
+          mode: track.mode,
+          cues: track.cues?.length,
+          id: track.id
         });
 
-        // Add to available subtitles if it's a subtitle/caption track
-        if (track.kind === 'subtitles' || track.kind === 'captions') {
-          const langCode = track.language || 'unknown';
+        // ONLY add tracks that are ACTUALLY from the video file (not our added ones)
+        // Our added tracks have labels like "English (Demo - OpenSubtitles unavailable)"
+        const isOurAddedTrack = track.label?.includes('Demo') || track.label?.includes('OpenSubtitles');
+        
+        if (!isOurAddedTrack && (track.kind === 'subtitles' || track.kind === 'captions')) {
+          const langCode = track.language || 'en';
+          const trackLabel = track.label || `${langCode.toUpperCase()} (Embedded from video)`;
+          
           embeddedSubs.push({
             id: `embedded-${i}`,
-            language: track.label || langCode,
+            language: trackLabel,
             languageCode: langCode,
-            url: '', // Embedded, no URL needed
-            label: track.label || langCode.toUpperCase(),
+            url: `embedded://${i}`, // Special URL to identify embedded tracks
+            label: trackLabel,
             format: 'embedded'
           });
+          
+          console.log(`[PlayerPage] ✅ Found REAL embedded track: ${trackLabel}`);
+          
+          // Auto-enable it
+          if (track.mode !== 'showing') {
+            track.mode = 'showing';
+            console.log(`[PlayerPage] 🎯 Auto-enabled embedded track: ${trackLabel}`);
+          }
+        } else if (isOurAddedTrack) {
+          console.log(`[PlayerPage] ⏭️ Skipping our own added track: ${track.label}`);
         }
       }
 
       if (embeddedSubs.length > 0) {
-        console.log('[PlayerPage] Found', embeddedSubs.length, 'embedded subtitle tracks');
-        // Merge with fetched subtitles, preferring embedded
+        console.log('[PlayerPage] 🎉 Found', embeddedSubs.length, 'REAL embedded subtitle tracks from video file!');
+        // Add embedded subtitles to the list (don't replace fetched ones)
         setAvailableSubtitles(prev => {
-          const combined = [...embeddedSubs];
-          // Add fetched subs that aren't already in embedded
-          prev.forEach(sub => {
-            if (!embeddedSubs.find(e => e.languageCode === sub.languageCode)) {
-              combined.push(sub);
-            }
-          });
-          return combined;
+          const nonEmbedded = prev.filter(s => !s.url.startsWith('embedded://'));
+          return [...embeddedSubs, ...nonEmbedded];
         });
+      } else {
+        console.log('[PlayerPage] ❌ This video file has NO embedded subtitle tracks');
+        console.log('[PlayerPage] 💡 Container format:', currentStream?.url?.includes('.mkv') ? 'MKV' : currentStream?.url?.includes('.mp4') ? 'MP4' : 'Unknown');
+        console.log('[PlayerPage] 💡 Note: Browsers may not expose all embedded tracks from MKV files');
+        console.log('[PlayerPage] 💡 Try using external subtitle sources or check if the file actually contains subs');
       }
-    }, 1000);
+    }, 2000); // Increased delay to give more time for tracks to load
+    
+    // Also check again after 5 seconds in case tracks load slowly
+    setTimeout(() => {
+      const tracks = video.textTracks;
+      if (tracks.length > 0) {
+        console.log('[PlayerPage] 🔄 LATE CHECK: Found', tracks.length, 'text tracks after 5 seconds');
+        detectEmbeddedSubtitles(); // Re-run detection
+      }
+    }, 5000);
   }
 
   function addSubtitleTracks() {
@@ -199,59 +319,95 @@ export function PlayerPage({
       }
     });
 
-    // Add external subtitle tracks (skip embedded ones)
-    availableSubtitles.forEach((sub) => {
+    // Add external subtitle tracks (skip embedded ones) - fetch and convert client-side
+    availableSubtitles.forEach(async (sub, index) => {
       if (sub.format === 'embedded') return; // Skip embedded, they're already in the video
 
-      const track = document.createElement('track');
-      track.kind = 'subtitles';
-      track.label = sub.label;
-      track.srclang = sub.languageCode;
-      track.src = sub.url;
+      try {
+        console.log('[PlayerPage] 🔄 Fetching subtitle:', sub.label, sub.url);
+        
+        // Fetch the subtitle content
+        const response = await fetch(sub.url);
+        if (!response.ok) {
+          console.error('[PlayerPage] Failed to fetch subtitle:', response.status);
+          return;
+        }
+        
+        let content = await response.text();
+        console.log('[PlayerPage] ✅ Fetched subtitle, length:', content.length);
+        
+        // Convert SRT to WebVTT if needed
+        if (!content.startsWith('WEBVTT')) {
+          console.log('[PlayerPage] Converting SRT to WebVTT...');
+          content = 'WEBVTT\n\n' + content
+            .replace(/\r\n/g, '\n')
+            .replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2'); // Replace comma with period in timestamps
+        }
+        
+        // Create a Blob and data URL
+        const blob = new Blob([content], { type: 'text/vtt' });
+        const dataUrl = URL.createObjectURL(blob);
+        
+        const track = document.createElement('track');
+        track.kind = 'subtitles';
+        track.label = sub.label;
+        track.srclang = sub.languageCode;
+        track.src = dataUrl;
+        track.id = sub.id || `sub-${index}`;
+        
+        console.log('[PlayerPage] ✅ Created subtitle track:', sub.label);
 
-      track.addEventListener('load', () => {
-        console.log('[PlayerPage] Subtitle track loaded:', sub.languageCode, sub.url);
-      });
+        track.addEventListener('load', () => {
+          console.log('[PlayerPage] 🎉 Subtitle track loaded successfully:', sub.label);
+        });
 
-      track.addEventListener('error', (e) => {
-        console.error('[PlayerPage] Subtitle track error:', sub.languageCode, e);
-      });
+        track.addEventListener('error', (e) => {
+          console.error('[PlayerPage] ❌ Subtitle track load error:', sub.label, e);
+        });
 
-      if (sub.languageCode === preferredSubtitleLang) {
-        track.default = true;
-        console.log('[PlayerPage] Setting default subtitle track:', sub.languageCode, sub.url);
+        video.appendChild(track);
+      } catch (error) {
+        console.error('[PlayerPage] Error processing subtitle:', sub.label, error);
       }
-
-      video.appendChild(track);
     });
 
     setTimeout(() => {
       console.log('[PlayerPage] TextTracks available:', video.textTracks.length);
 
-      if (preferredSubtitleLang && video.textTracks.length > 0) {
-        for (let i = 0; i < video.textTracks.length; i++) {
-          const track = video.textTracks[i];
-          console.log(`[PlayerPage] Track ${i}:`, {
-            language: track.language,
-            label: track.label,
-            kind: track.kind,
-            mode: track.mode,
-            readyState: track.mode === 'showing' ? 'showing' : track.mode
+      // Find the FIRST subtitle that matches preferred language and enable ONLY that one
+      let foundPreferred = false;
+      
+      for (let i = 0; i < video.textTracks.length; i++) {
+        const track = video.textTracks[i];
+        const trackElement = Array.from(video.querySelectorAll('track'))[i] as HTMLTrackElement;
+        const trackId = trackElement?.id;
+        
+        console.log(`[PlayerPage] Track ${i}:`, {
+          id: trackId,
+          language: track.language,
+          label: track.label,
+          kind: track.kind,
+          mode: track.mode
+        });
+
+        // Enable ONLY the first subtitle that matches preferred language
+        if (!foundPreferred && preferredSubtitleLang && track.language === preferredSubtitleLang) {
+          track.mode = 'showing';
+          setCurrentSubtitle(trackId || track.language); // Store unique ID
+          setSubtitlesEnabled(true);
+          foundPreferred = true;
+          console.log('[PlayerPage] ✅ Enabled FIRST subtitle track:', track.label, 'ID:', trackId);
+
+          track.addEventListener('cuechange', () => {
+            console.log('[PlayerPage] Cue changed, active cues:', track.activeCues?.length);
           });
-
-          if (track.language === preferredSubtitleLang) {
-            track.mode = 'showing';
-            setCurrentSubtitle(preferredSubtitleLang);
-            setSubtitlesEnabled(true);
-            console.log('[PlayerPage] Enabled subtitle track:', preferredSubtitleLang, 'mode:', track.mode);
-
-            track.addEventListener('cuechange', () => {
-              console.log('[PlayerPage] Cue changed, active cues:', track.activeCues?.length);
-            });
-          } else {
-            track.mode = 'hidden';
-          }
+        } else {
+          track.mode = 'hidden';
         }
+      }
+      
+      if (!foundPreferred) {
+        console.log('[PlayerPage] No preferred subtitle found, all tracks hidden');
       }
     }, 500);
   }
@@ -336,13 +492,17 @@ export function PlayerPage({
     const video = videoRef.current;
     console.log('[PlayerPage] Initializing player with stream:', { url: stream.url, kind: stream.kind, quality: stream.quality });
 
-    let streamUrl = stream.url;
-
-    if (stream.kind === 'mp4' && !streamUrl.includes('/functions/v1/proxy-video')) {
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-      streamUrl = `${supabaseUrl}/functions/v1/proxy-video?url=${encodeURIComponent(stream.url)}`;
-      console.log('[PlayerPage] Proxying MP4 through:', streamUrl.substring(0, 150));
+    // Check if this is a Torrentio "downloading" placeholder
+    if (stream.url.includes('torrentio.strem.fun') && stream.url.includes('/videos/downloading')) {
+      console.log('[PlayerPage] Torrentio is caching torrent to Real-Debrid...');
+      setError('⏳ Torrentio is caching this torrent to Real-Debrid. This may take 1-5 minutes for the first play. Please try again in a moment, or select a different source.');
+      setLoading(false);
+      return;
     }
+
+    // Use the URL as-is from the backend
+    // The backend already proxies Real-Debrid URLs if needed
+    let streamUrl = stream.url;
 
     try {
       const engine = await attach(
@@ -351,7 +511,13 @@ export function PlayerPage({
         stream.kind,
         (error) => {
           console.error('Player error:', error);
-          setError(`Playback error: ${error.message}. Trying fallback...`);
+          
+          // Check if it's a downloading error
+          if (error.message.includes('downloading') || error.message.includes('404')) {
+            setError('⏳ Torrentio is still caching this content to Real-Debrid. Please wait 1-2 minutes and try again, or select a different source.');
+          } else {
+            setError(`Playback error: ${error.message}. Trying fallback...`);
+          }
 
           setTimeout(() => {
             const nextStream = streams.find(s => s.url !== stream.url);
@@ -372,6 +538,17 @@ export function PlayerPage({
 
       video.addEventListener('loadedmetadata', () => {
         const dur = video.duration;
+        
+        // Autoplay the video once metadata is loaded
+        if (!video.paused) {
+          // Already playing
+        } else {
+          video.play().catch(e => {
+            console.warn('[PlayerPage] Autoplay after metadata failed:', e);
+            // Browser may block autoplay, user will need to click play button
+          });
+        }
+        
         if (dur && isFinite(dur)) {
           setDuration(dur);
         }
@@ -407,6 +584,30 @@ export function PlayerPage({
         // Check video source
         console.log('[PlayerPage] Current src:', video.currentSrc ? video.currentSrc.substring(0, 150) : 'none');
         console.log('[PlayerPage] Network state:', video.networkState, 'Ready state:', video.readyState);
+        
+        // Check if this is a Torrentio "downloading" placeholder video
+        // These are typically exactly 30 seconds (give or take 1 second)
+        // Real episodes/movies are always > 5 minutes
+        if (dur > 0 && dur <= 120 && (contentType === 'series' || contentType === 'anime')) {
+          // Check if it's suspiciously short for a TV episode (which are typically 20-60 minutes)
+          if (dur < 300) { // Less than 5 minutes
+            console.warn('[PlayerPage] ⚠️  Detected very short video (' + Math.round(dur) + 's) for TV show - likely uncached torrent');
+            setError('⏳ This stream is not cached. Trying next stream...');
+            
+            // Auto-skip to next stream immediately
+            setTimeout(() => {
+              const nextStream = streams.find((s: any) => s.url !== stream.url);
+              if (nextStream) {
+                console.log('[PlayerPage] Auto-skipping to next stream');
+                initializePlayer(nextStream, 0);
+              } else {
+                setError('No cached streams found. Please try again later or use a different addon.');
+                setLoading(false);
+              }
+            }, 2000);
+            return;
+          }
+        }
 
         // Check for embedded text tracks
         detectEmbeddedSubtitles();
@@ -710,19 +911,35 @@ export function PlayerPage({
     setPlaybackSpeed(speed);
   };
 
-  const handleSubtitleChange = (lang?: string) => {
-    console.log('[PlayerPage] handleSubtitleChange called with:', lang);
-    setCurrentSubtitle(lang);
-    setSubtitlesEnabled(!!lang);
+  const handleSubtitleChange = (subtitleId?: string) => {
+    console.log('[PlayerPage] 🎬 handleSubtitleChange called with ID:', subtitleId);
+    setCurrentSubtitle(subtitleId);
+    setSubtitlesEnabled(!!subtitleId);
 
     if (videoRef.current) {
       const tracks = videoRef.current.textTracks;
+      const trackElements = Array.from(videoRef.current.querySelectorAll('track'));
       console.log('[PlayerPage] Total tracks:', tracks.length);
 
+      // Disable ALL tracks first
       for (let i = 0; i < tracks.length; i++) {
-        const shouldShow = tracks[i].language === lang;
-        tracks[i].mode = shouldShow ? 'showing' : 'hidden';
-        console.log(`[PlayerPage] Track ${i} (${tracks[i].language}): mode=${tracks[i].mode}, shouldShow=${shouldShow}`);
+        tracks[i].mode = 'hidden';
+      }
+
+      // Enable ONLY the selected track
+      if (subtitleId) {
+        for (let i = 0; i < trackElements.length; i++) {
+          const trackElement = trackElements[i] as HTMLTrackElement;
+          const trackId = trackElement.id;
+          
+          if (trackId === subtitleId) {
+            tracks[i].mode = 'showing';
+            console.log(`[PlayerPage] ✅ Enabled subtitle: ${tracks[i].label} (ID: ${trackId})`);
+            break;
+          }
+        }
+      } else {
+        console.log('[PlayerPage] Subtitles turned OFF');
       }
     }
   };
@@ -792,13 +1009,7 @@ export function PlayerPage({
         />
       )}
 
-      {showAudioWarning && !showIncompatibleSheet && (
-        <div className="absolute top-20 left-1/2 transform -translate-x-1/2 bg-blue-600/90 text-white px-6 py-3 rounded-lg shadow-lg z-40 max-w-md text-center">
-          <div className="text-sm">
-            Your browser or device cannot handle this quality audio, a lower one is selected.
-          </div>
-        </div>
-      )}
+      {/* Audio warning removed - handled silently by stream classifier */}
 
       {showResumePrompt && (
         <div className="absolute inset-0 bg-black/90 flex items-center justify-center z-50">

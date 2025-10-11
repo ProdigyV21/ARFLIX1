@@ -29,7 +29,7 @@ interface MetaDetails {
   genre?: string[];
   director?: string;
   creators?: string[];
-  cast?: Array<{ name: string; character?: string; profile?: string | null }>;
+  cast?: Array<{ name: string; character?: string; profile?: string | null; profileUrl?: string }>;
   imdbRating?: string;
   rating?: number;
   seasonCount?: number;
@@ -46,6 +46,9 @@ interface MetaDetails {
     season?: number;
     episode?: number;
   }>;
+  releaseDate?: string; // ISO date string (YYYY-MM-DD)
+  streamingServices?: string[];
+  trailerUrl?: string; // Direct YouTube URL for demo purposes
 }
 
 interface Season {
@@ -129,6 +132,35 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
             episodeCount: 0,
           }));
 
+          setSeasons(validSeasons);
+          if (validSeasons.length > 0) {
+            setSelectedSeason(validSeasons[0].seasonNumber);
+            loadEpisodesForSeason(metaData.id, validSeasons[0].seasonNumber);
+          }
+        } else if (metaData.id.startsWith('tmdb:')) {
+          // New TMDB format (tmdb:1396)
+          const tmdbId = metaData.id.replace('tmdb:', '');
+          console.log('[DetailsPage] Loading seasons for TMDB ID:', tmdbId);
+          
+          const seasonsData = await fetchSeasons(tmdbId);
+          console.log('[DetailsPage] Raw seasons data:', seasonsData.seasons);
+          
+          // Handle both formats: array of numbers [1,2,3] or array of Season objects
+          let validSeasons: Season[];
+          if (seasonsData.seasons.length > 0 && typeof seasonsData.seasons[0] === 'number') {
+            // Array of numbers format - convert to Season objects
+            validSeasons = seasonsData.seasons.map((num: number) => ({
+              seasonNumber: num,
+              name: `Season ${num}`,
+              episodeCount: 0,
+            }));
+          } else {
+            // Array of Season objects format
+            validSeasons = seasonsData.seasons.filter((s: Season) => s.seasonNumber > 0);
+          }
+          
+          console.log('[DetailsPage] Loaded seasons:', validSeasons);
+          
           setSeasons(validSeasons);
           if (validSeasons.length > 0) {
             setSelectedSeason(validSeasons[0].seasonNumber);
@@ -220,7 +252,10 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
   }
 
   function handleTrailer() {
-    if (meta?.trailers && meta.trailers.length > 0) {
+    if (meta?.trailerUrl) {
+      // Use the direct trailer URL
+      window.open(meta.trailerUrl, '_blank');
+    } else if (meta?.trailers && meta.trailers.length > 0) {
       const trailerKey = meta.trailers[0].key;
       // Try to open in new window as YouTube embed restrictions can block iframe embedding
       window.open(`https://www.youtube.com/watch?v=${trailerKey}`, '_blank');
@@ -255,11 +290,11 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
   }
 
   const displayTitle = meta.title || meta.name || '';
-  const hasTrailer = meta.trailers && meta.trailers.length > 0;
+  const hasTrailer = (meta.trailers && meta.trailers.length > 0) || meta.trailerUrl;
 
   return (
     <div ref={containerRef} className="min-h-screen -ml-[90px]">
-      <div className="relative min-h-screen">
+      <div className="relative min-h-[85vh]">
         {(meta.backdrop || meta.background || meta.poster) ? (
           <div
             className="absolute inset-0 bg-cover bg-center"
@@ -329,6 +364,35 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
               </p>
             )}
 
+            {/* Release Date */}
+            {meta.releaseDate && (
+              <div className="flex items-center gap-2 text-white/80">
+                <span className="text-sm font-medium">Release Date:</span>
+                <span className="text-sm">
+                  {new Date(meta.releaseDate).toLocaleDateString('en-US', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </span>
+              </div>
+            )}
+
+            {/* Streaming Services */}
+            {meta.streamingServices && meta.streamingServices.length > 0 && (
+              <div className="flex items-center gap-2 text-white/80">
+                <span className="text-sm font-medium">Available on:</span>
+                <div className="flex gap-2">
+                  {meta.streamingServices.map((service, index) => (
+                    <span key={index} className="px-2 py-1 bg-white/20 rounded text-xs">
+                      {service}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+
             <div className="flex items-center gap-4 pt-2">
               <button
                 ref={playRef}
@@ -370,8 +434,8 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
       </div>
 
       {(meta.type === 'series' || meta.type === 'anime') && seasons.length > 0 && (
-        <div className="absolute top-[50vh] left-0 right-0 z-10">
-          <div className="pl-[102px] pr-8 bg-gradient-to-b from-transparent via-black/80 to-black pt-8">
+        <div className="relative bg-black pt-12 pb-8">
+          <div className="pl-[102px] pr-8">
           <div className="mb-8">
             <h2 className="text-3xl font-bold mb-4">Seasons</h2>
             <div className="flex gap-3 flex-wrap">
@@ -436,6 +500,15 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
                           </span>
                         )}
                       </div>
+                      {episode.airDate && (
+                        <p className="text-xs text-white/50 mb-1">
+                          {new Date(episode.airDate).toLocaleDateString('en-US', {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                          })}
+                        </p>
+                      )}
                       {(episode.overview || episode.description) && (
                         <p className="text-sm text-white/70 line-clamp-2">
                           {episode.overview || episode.description}
@@ -460,9 +533,9 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
               {meta.cast.map((actor, index) => (
                 <div key={index} className="text-center">
                   <div className="aspect-[2/3] mb-3 rounded-lg overflow-hidden bg-white/5">
-                    {actor.profile ? (
+                    {(actor.profile || actor.profileUrl) ? (
                       <img
-                        src={actor.profile}
+                        src={actor.profile || actor.profileUrl}
                         alt={actor.name}
                         className="w-full h-full object-cover"
                       />
