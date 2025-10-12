@@ -124,6 +124,7 @@ export function SearchPage({ onNavigate }: SearchPageProps) {
                       image16x9: item.backdrop || item.poster || '',
                       year: item.year?.toString(),
                     }}
+                    watched={(() => { try { const set = new Set<string>(JSON.parse(localStorage.getItem('watched')||'[]')); return set.has(`${item.type}:${item.id}`);} catch {return false;}})()}
                     onClick={() =>
                       onNavigate('details', {
                         id: item.id,

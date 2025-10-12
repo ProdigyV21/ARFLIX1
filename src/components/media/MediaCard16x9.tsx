@@ -9,9 +9,10 @@ interface MediaCard16x9Props {
   };
   onClick?: () => void;
   showTitle?: boolean;
+  watched?: boolean;
 }
 
-export default function MediaCard16x9({ item, onClick, showTitle: _showTitle = false }: MediaCard16x9Props) {
+export default function MediaCard16x9({ item, onClick, showTitle: _showTitle = false, watched = false }: MediaCard16x9Props) {
   const [imageError, setImageError] = useState(false);
   const hasValidImage = item.image16x9 && (
     item.image16x9.includes('/t/p/') ||
@@ -54,6 +55,12 @@ export default function MediaCard16x9({ item, onClick, showTitle: _showTitle = f
                 {item.year && <span className="text-white/70 font-normal"> ({item.year})</span>}
               </h3>
             </div>
+            {/* Watched checkmark */}
+            {watched && (
+              <div className="absolute top-2 left-2 z-20 rounded-full bg-black/70 p-2">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" className="w-4 h-4"><path d="M9 12l2 2 4-4" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              </div>
+            )}
           </>
         )}
       </div>

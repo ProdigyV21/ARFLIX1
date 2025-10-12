@@ -472,6 +472,15 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
                 data-focusable="true"
                 className="flex items-center justify-center w-14 h-14 bg-white/20 backdrop-blur text-white rounded-full hover:bg-white/30 transition-all"
                 aria-label="Mark as watched"
+                onClick={() => {
+                  try {
+                    const key = `${meta.type}:${contentId}`;
+                    const raw = localStorage.getItem('watched');
+                    const set = new Set<string>(raw ? JSON.parse(raw) : []);
+                    if (set.has(key)) set.delete(key); else set.add(key);
+                    localStorage.setItem('watched', JSON.stringify(Array.from(set)));
+                  } catch {}
+                }}
               >
                 {/* Eye icon */}
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7"><path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7zm0 12a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>

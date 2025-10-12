@@ -564,6 +564,14 @@ export function HomePage({ onNavigate }: HomePageProps) {
   const [hasAddons, setHasAddons] = useState(false);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
   const [watchlistIds, setWatchlistIds] = useState<Set<string>>(new Set());
+  const [watchedIds, setWatchedIds] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem('watched');
+      return new Set(raw ? JSON.parse(raw) as string[] : []);
+    } catch {
+      return new Set();
+    }
+  });
 
   useFocusable(watchRef);
   useFocusable(infoRef);
@@ -802,7 +810,9 @@ export function HomePage({ onNavigate }: HomePageProps) {
                       id: item.id,
                       title: item.title,
                       image16x9: item.backdrop || item.poster || '',
+                      year: item.year?.toString()
                     }}
+                    watched={watchedIds.has(`${item.type}:${item.id}`)}
                     onClick={() => {
                       onNavigate('details', {
                         id: item.id,
@@ -834,6 +844,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
                       image16x9: item.backdrop || item.poster || '',
                       year: item.year?.toString()
                     }}
+                    watched={watchedIds.has(`${item.type}:${item.id}`)}
                     onClick={() => {
                         handleItemClick(item);
                     }}
