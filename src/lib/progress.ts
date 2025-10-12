@@ -66,6 +66,19 @@ export async function saveProgress(progress: WatchProgress): Promise<void> {
   } catch (err) {
     console.error('Unexpected error saving watch history:', err);
   }
+
+  // Auto mark watched at 95%
+  try {
+    if (progress.duration > 0 && progress.currentTime / progress.duration >= 0.95) {
+      const key = `${progress.type}:${progress.id}` + (progress.seasonNumber && progress.episodeNumber ? `:s${progress.seasonNumber}:e${progress.episodeNumber}` : '');
+      const raw = localStorage.getItem('watched');
+      const set = new Set<string>(raw ? JSON.parse(raw) : []);
+      if (!set.has(key)) {
+        set.add(key);
+        localStorage.setItem('watched', JSON.stringify(Array.from(set)));
+      }
+    }
+  } catch {}
 }
 
 export function getProgress(id: string): WatchProgress | null {

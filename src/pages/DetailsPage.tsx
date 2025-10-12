@@ -490,7 +490,17 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
                 data-focusable="true"
                 className="flex items-center justify-center w-14 h-14 bg-white/20 backdrop-blur text-white rounded-full hover:bg-white/30 transition-all"
                 aria-label="Mark as watched"
-                onClick={() => toggleWatched(`${meta.type}:${contentId}`)}
+                onClick={() => {
+                  const seriesKeyPrefix = `${meta.type}:${contentId}`;
+                  const wasWatched = watchedKeys.has(seriesKeyPrefix);
+                  toggleWatched(seriesKeyPrefix);
+                  if (!wasWatched && meta.type !== 'movie') {
+                    episodes.forEach((ep) => {
+                      const epNum = ep.episodeNumber || ep.number || 0;
+                      toggleWatched(`${seriesKeyPrefix}:s${selectedSeason}:e${epNum}`);
+                    });
+                  }
+                }}
               >
                 {watchedKeys.has(`${meta.type}:${contentId}`) ? (
                   // Check icon

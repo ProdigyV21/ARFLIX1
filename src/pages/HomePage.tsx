@@ -803,14 +803,16 @@ export function HomePage({ onNavigate }: HomePageProps) {
           <h2 className="text-3xl font-bold mb-6">Continue Watching</h2>
           <ScrollCarousel id="continue-watching" className="pb-4">
             {continueWatching.map((item, index) => {
+              const epLabel = item.seasonNumber && item.episodeNumber ? `S${String(item.seasonNumber).padStart(2,'0')}-E${String(item.episodeNumber).padStart(2,'0')}` : undefined;
+              const pct = item.duration > 0 ? Math.min(100, Math.max(0, (item.position || 0) / item.duration * 100)) : 0;
               return (
                 <div key={`${item.id}-${item.title}-${index}`} className="flex-shrink-0 w-[360px]">
                   <MediaCard16x9
                     item={{
                       id: item.id,
-                      title: item.title,
+                      title: epLabel ? `${epLabel} • ${item.title}` : item.title,
                       image16x9: item.backdrop || item.poster || '',
-                      year: item.year?.toString()
+                      year: undefined
                     }}
                     watched={watchedIds.has(`${item.type}:${item.id}`)}
                     onClick={() => {
@@ -820,6 +822,11 @@ export function HomePage({ onNavigate }: HomePageProps) {
                       });
                     }}
                   />
+                  {item.duration > 0 && (
+                    <div className="mt-2 h-1.5 bg-white/10 rounded-full overflow-hidden">
+                      <div className="h-full bg-white/80" style={{ width: `${pct}%` }} />
+                    </div>
+                  )}
                 </div>
               );
             })}
