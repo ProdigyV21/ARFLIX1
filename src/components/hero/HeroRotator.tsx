@@ -40,7 +40,7 @@ export default function HeroRotator({
         const combined = [
           ...(trendingMovies || []),
           ...(trendingTV || [])
-        ].filter(item => item.poster || item.backdrop);
+        ].filter(item => item.posterUrl || item.backdropUrl);
 
         if (combined.length === 0) {
           console.warn('[HeroRotator] No trending items found');
@@ -141,9 +141,9 @@ export default function HeroRotator({
   const isInWatchlist = watchlistIds.has(currentItem.id);
 
   // Get highest quality backdrop
-  const backdropUrl = currentItem.backdrop 
-    ? currentItem.backdrop.replace(/w\d+/, 'original')
-    : currentItem.poster?.replace(/w\d+/, 'w1280');
+  const backdropUrl = currentItem.backdropUrl 
+    ? currentItem.backdropUrl.replace(/w\d+/, 'original')
+    : currentItem.posterUrl?.replace(/w\d+/, 'w1280');
 
   return (
     <div className="relative w-full h-[70vh] overflow-hidden">
@@ -168,7 +168,7 @@ export default function HeroRotator({
             className={`text-4xl sm:text-5xl lg:text-6xl font-bold text-white transition-opacity duration-${CROSSFADE_DURATION}`}
             style={{ opacity: isTransitioning ? 0 : 1 }}
           >
-            {currentItem.name}
+            {currentItem.title}
           </h1>
 
           {/* Meta Info */}
@@ -195,7 +195,7 @@ export default function HeroRotator({
             className={`text-base sm:text-lg text-gray-200 line-clamp-3 transition-opacity duration-${CROSSFADE_DURATION}`}
             style={{ opacity: isTransitioning ? 0 : 1 }}
           >
-            {currentItem.description}
+            {currentItem.overview}
           </p>
 
           {/* CTA Buttons */}
