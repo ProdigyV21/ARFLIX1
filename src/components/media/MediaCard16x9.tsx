@@ -47,7 +47,7 @@ export default function MediaCard16x9({ item, onClick, showTitle: _showTitle = f
             />
             <div className="fit-abs bg-gradient-to-t from-black/90 via-transparent to-transparent pointer-events-none" />
             {/* Hover glow outline */}
-            <div className="pointer-events-none absolute inset-0 rounded-xl ring-2 ring-white/50 shadow-[0_0_24px_rgba(255,255,255,0.2)] opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="pointer-events-none absolute inset-0 rounded-xl z-20 ring-2 ring-white/80 shadow-[0_0_24px_rgba(255,255,255,0.35)] mix-blend-screen opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
             <div className="absolute bottom-0 left-0 right-0 p-4 pointer-events-none">
               <h3 className="text-white font-bold text-base line-clamp-2 drop-shadow-lg">
                 {item.title}
