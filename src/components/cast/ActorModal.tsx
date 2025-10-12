@@ -30,7 +30,8 @@ export default function ActorModal({ actor, onClose }: ActorModalProps) {
         setLoading(true);
         
         // Extract TMDB person ID from actor.id
-        const personId = actor.id.includes(':') ? actor.id.split(':')[1] : actor.id;
+        const fallbackId = actor.name?.replace(/[^a-z0-9]+/gi, '-').toLowerCase();
+        const personId = actor.id && actor.id.includes(':') ? actor.id.split(':')[1] : actor.id || fallbackId;
         const tmdbApiKey = '080380c1ad7b3967af3def25159e4374';
         
         // Fetch actor details

@@ -2561,6 +2561,7 @@ export class TMDBProvider implements MetadataProvider {
           // Add cast
           if (movieData.credits?.cast) {
             title.cast = movieData.credits.cast.slice(0, 15).map((c: any) => ({
+              id: `tmdb:${c.id}`,
               name: c.name,
               character: c.character,
               profileUrl: c.profile_path ? `https://image.tmdb.org/t/p/w185${c.profile_path}` : undefined,
@@ -2603,6 +2604,7 @@ export class TMDBProvider implements MetadataProvider {
           // Add cast
           if (tvData.credits?.cast) {
             title.cast = tvData.credits.cast.slice(0, 15).map((c: any) => ({
+              id: `tmdb:${c.id}`,
               name: c.name,
               character: c.character,
               profileUrl: c.profile_path ? `https://image.tmdb.org/t/p/w185${c.profile_path}` : undefined,

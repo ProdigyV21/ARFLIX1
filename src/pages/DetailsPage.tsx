@@ -332,7 +332,7 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
 
   return (
     <div ref={containerRef} className="min-h-screen -ml-[90px]">
-      <div className="relative min-h-[60vh]">
+      <div className="relative min-h-[48vh]">
         {(meta.backdrop || meta.background || meta.poster) ? (
           <div
             className="absolute inset-0 bg-cover bg-center"
@@ -347,7 +347,7 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
           <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 via-black to-zinc-900" />
         )}
 
-        <div className="relative flex flex-col justify-start pt-20 pb-6 pl-[102px] pr-12">
+        <div className="relative flex flex-col justify-start pt-16 pb-4 pl-[102px] pr-12">
           <button
             ref={backRef}
             data-focusable="true"

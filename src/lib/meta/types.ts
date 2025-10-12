@@ -1,4 +1,5 @@
 export interface CastMember {
+  id?: string; // e.g., tmdb:12345
   name: string;
   character: string;
   profileUrl?: string;
