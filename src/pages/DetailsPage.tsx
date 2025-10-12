@@ -339,11 +339,7 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
             style={{
               backgroundImage: `url(${meta.backdrop || meta.background || meta.poster})`,
             }}
-          >
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-black/40" />
-            <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-b from-transparent to-black" />
-          </div>
+          />
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 via-black to-zinc-900" />
         )}

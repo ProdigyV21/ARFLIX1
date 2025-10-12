@@ -154,12 +154,7 @@ export default function HeroRotator({
           backgroundImage: `url(${backdropUrl})`,
           opacity: isTransitioning ? 0 : 1
         }}
-      >
-        {/* Gradient Overlays */}
-        <div className="absolute inset-0 bg-gradient-to-r from-black via-black/80 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent" />
-        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-b from-transparent to-black/70" />
-      </div>
+      />
 
       {/* Content */}
       <div className="relative h-full px-8 flex items-end pb-14 sm:pb-16 lg:pb-20">
