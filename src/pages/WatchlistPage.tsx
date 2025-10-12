@@ -2,9 +2,9 @@ import { useEffect, useState, useRef } from 'react';
 import { Film, Loader2 } from 'lucide-react';
 import { ContentCard } from '../components/ContentCard';
 import { useFocusManager } from '../lib/focus';
-import { supabase } from '../lib/supabase';
-import type { WatchHistoryItem } from '../lib/supabase';
 import type { Page } from '../types/navigation';
+import { metadataProvider } from '../lib/meta';
+import type { Title } from '../lib/meta/types';
 
 interface WatchlistPageProps {
   onNavigate: (page: Page, data?: any) => void;
@@ -12,7 +12,7 @@ interface WatchlistPageProps {
 
 export function WatchlistPage({ onNavigate }: WatchlistPageProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [history, setHistory] = useState<WatchHistoryItem[]>([]);
+  const [items, setItems] = useState<Title[]>([]);
   const [loading, setLoading] = useState(true);
 
   useFocusManager(containerRef, {
@@ -20,30 +20,30 @@ export function WatchlistPage({ onNavigate }: WatchlistPageProps) {
   });
 
   useEffect(() => {
-    loadWatchHistory();
+    loadWatchlist();
   }, []);
 
-  async function loadWatchHistory() {
+  async function loadWatchlist() {
     try {
       setLoading(true);
-      const { data: { user } } = await supabase.auth.getUser();
-
-      if (!user) {
-        setLoading(false);
+      const stored = localStorage.getItem('watchlist');
+      const ids: string[] = stored ? JSON.parse(stored) : [];
+      if (!ids || ids.length === 0) {
+        setItems([]);
         return;
       }
 
-      const { data, error } = await supabase
-        .from('watch_history')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('last_watched', { ascending: false })
-        .limit(50);
-
-      if (error) throw error;
-      setHistory(data || []);
+      // Fetch metadata for each id in parallel
+      const results = await Promise.allSettled(
+        ids.map(id => metadataProvider.getTitle(undefined, id))
+      );
+      const titles: Title[] = results
+        .filter(r => r.status === 'fulfilled')
+        .map(r => (r as PromiseFulfilledResult<Title>).value);
+      setItems(titles);
     } catch (error) {
-      console.error('Failed to load watch history:', error);
+      console.error('Failed to load watchlist:', error);
+      setItems([]);
     } finally {
       setLoading(false);
     }
@@ -62,45 +62,32 @@ export function WatchlistPage({ onNavigate }: WatchlistPageProps) {
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center gap-3 mb-8">
           <Film className="w-12 h-12" />
-          <h1 className="text-5xl font-bold">Continue Watching</h1>
+          <h1 className="text-5xl font-bold">Your Watchlist</h1>
         </div>
 
-        {history.length === 0 ? (
+        {items.length === 0 ? (
           <div className="text-center py-20">
             <Film className="w-20 h-20 text-muted-foreground mx-auto mb-4" />
-            <p className="text-2xl text-muted-foreground">No watch history yet</p>
+            <p className="text-2xl text-muted-foreground">Your watchlist is empty</n>
             <p className="text-lg text-muted-foreground/60 mt-2">
-              Start watching content to see it here
+              Add shows or movies using the + button
             </p>
           </div>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-            {history.map((item) => {
-              const progress = item.duration > 0 ? (item.position / item.duration) * 100 : 0;
-
-              return (
-                <div key={item.id} className="relative">
-                  <ContentCard
-                    title={item.title}
-                    poster={item.poster || undefined}
-                    type={item.content_type}
-                    onClick={() => {
-                      const [addonId, type, id] = item.content_id.split(':');
-                      onNavigate('details', { id, type, addonId });
-                    }}
-                  />
-
-                  {progress > 0 && (
-                    <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20 rounded-b-lg overflow-hidden">
-                      <div
-                        className="h-full bg-white"
-                        style={{ width: `${progress}%` }}
-                      />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+            {items.map((title) => (
+              <div key={title.id} className="relative">
+                <ContentCard
+                  title={title.title}
+                  poster={title.posterUrl}
+                  type={title.type}
+                  onClick={() => {
+                    const id = title.externalIds.tmdb ? `tmdb:${title.externalIds.tmdb}` : title.id;
+                    onNavigate('details', { id, type: title.type });
+                  }}
+                />
+              </div>
+            ))}
           </div>
         )}
       </div>
