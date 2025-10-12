@@ -21,7 +21,7 @@ export default function MediaCard16x9({ item, onClick, showTitle: _showTitle = f
   return (
     <div className="group relative">
       <div
-        className="aspect-16x9 rounded-xl overflow-hidden bg-neutral-900/40 border-2 border-white/10 hover:border-white/30 transition-transform duration-300 ease-out will-change-transform cursor-pointer group-hover:scale-[1.03]"
+        className="aspect-16x9 rounded-xl overflow-hidden bg-neutral-900/40 ring-1 ring-white/10 hover:ring-white/60 hover:shadow-[0_0_24px_rgba(255,255,255,0.18)] transition-colors duration-300 cursor-pointer"
         tabIndex={0}
         role="button"
         aria-label={item.title}
@@ -42,7 +42,7 @@ export default function MediaCard16x9({ item, onClick, showTitle: _showTitle = f
               alt={item.title}
               loading="lazy"
               decoding="async"
-              className="fit-abs"
+              className="fit-abs transition-transform duration-300 ease-out group-hover:scale-[1.05]"
               onError={() => setImageError(true)}
             />
             <div className="fit-abs bg-gradient-to-t from-black/90 via-transparent to-transparent pointer-events-none" />
