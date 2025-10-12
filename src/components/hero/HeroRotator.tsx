@@ -161,7 +161,7 @@ export default function HeroRotator({
       </div>
 
       {/* Content */}
-      <div className="relative h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex items-center">
+      <div className="relative h-full px-8 flex items-center">
         <div className="max-w-2xl space-y-4">
           {/* Title */}
           <h1 
