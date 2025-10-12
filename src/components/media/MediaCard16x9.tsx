@@ -21,7 +21,7 @@ export default function MediaCard16x9({ item, onClick, showTitle: _showTitle = f
   return (
     <div className="group relative">
       <div
-        className="aspect-16x9 rounded-xl overflow-hidden bg-neutral-900/40 border-2 border-white/10 hover:border-white/30 transition-all cursor-pointer"
+        className="aspect-16x9 rounded-xl overflow-hidden bg-neutral-900/40 border-2 border-white/10 hover:border-white/30 transition-transform duration-300 ease-out will-change-transform cursor-pointer group-hover:scale-[1.03]"
         tabIndex={0}
         role="button"
         aria-label={item.title}

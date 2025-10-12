@@ -518,7 +518,7 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
                       onClick={() => handlePlay(selectedSeason, episodeNum)}
                       className="group text-left bg-white/5 rounded-lg overflow-hidden hover:bg-white/10 transition-all flex-shrink-0 w-[360px]"
                     >
-                      <div className="relative aspect-video bg-gray-800">
+                      <div className="relative aspect-video bg-gray-800 transition-transform duration-300 group-hover:scale-[1.03]">
                         {episode.still ? (
                           <img
                             src={episode.still}

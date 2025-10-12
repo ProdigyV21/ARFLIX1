@@ -33,7 +33,7 @@ export default function CastCarousel({ cast, className = '', onNavigate }: CastC
               <button
                 key={member.id}
                 onClick={() => setSelectedActor(member)}
-                className="flex-shrink-0 w-32 text-left group/cast cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/50 rounded-lg"
+                className="flex-shrink-0 w-32 text-left group/cast cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/50 rounded-lg transition-transform duration-300 ease-out hover:scale-[1.03]"
                 aria-label={`View details for ${member.name}`}
               >
                 <div className="relative aspect-[2/3] mb-2 rounded-lg overflow-hidden bg-gray-800">

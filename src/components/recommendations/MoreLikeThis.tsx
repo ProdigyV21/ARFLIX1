@@ -126,7 +126,7 @@ export default function MoreLikeThis({
           const isInWatchlist = watchlistIds.has(item.id);
           
           return (
-            <div key={item.id} className="flex-shrink-0 w-[360px] group relative">
+            <div key={item.id} className="flex-shrink-0 w-[360px] group relative transition-transform duration-300 ease-out hover:scale-[1.03]">
               <MediaCard16x9
                 item={{
                   id: item.id,
