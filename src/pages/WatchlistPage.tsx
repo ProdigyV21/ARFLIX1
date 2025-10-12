@@ -68,7 +68,7 @@ export function WatchlistPage({ onNavigate }: WatchlistPageProps) {
         {items.length === 0 ? (
           <div className="text-center py-20">
             <Film className="w-20 h-20 text-muted-foreground mx-auto mb-4" />
-            <p className="text-2xl text-muted-foreground">Your watchlist is empty</n>
+            <p className="text-2xl text-muted-foreground">Your watchlist is empty</p>
             <p className="text-lg text-muted-foreground/60 mt-2">
               Add shows or movies using the + button
             </p>
