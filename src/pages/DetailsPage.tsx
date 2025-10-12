@@ -91,6 +91,24 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [loadingEpisodes, setLoadingEpisodes] = useState(false);
   const [watchlistIds, setWatchlistIds] = useState<Set<string>>(new Set());
+  // Local watched state for instant UI feedback
+  const [watchedKeys, setWatchedKeys] = useState<Set<string>>(() => {
+    try {
+      const raw = localStorage.getItem('watched');
+      return new Set(raw ? (JSON.parse(raw) as string[]) : []);
+    } catch {
+      return new Set();
+    }
+  });
+
+  function toggleWatched(key: string) {
+    setWatchedKeys(prev => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key); else next.add(key);
+      try { localStorage.setItem('watched', JSON.stringify(Array.from(next))); } catch {}
+      return next;
+    });
+  }
 
   useFocusable(backRef);
   useFocusable(playRef);
@@ -472,18 +490,15 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
                 data-focusable="true"
                 className="flex items-center justify-center w-14 h-14 bg-white/20 backdrop-blur text-white rounded-full hover:bg-white/30 transition-all"
                 aria-label="Mark as watched"
-                onClick={() => {
-                  try {
-                    const key = `${meta.type}:${contentId}`;
-                    const raw = localStorage.getItem('watched');
-                    const set = new Set<string>(raw ? JSON.parse(raw) : []);
-                    if (set.has(key)) set.delete(key); else set.add(key);
-                    localStorage.setItem('watched', JSON.stringify(Array.from(set)));
-                  } catch {}
-                }}
+                onClick={() => toggleWatched(`${meta.type}:${contentId}`)}
               >
-                {/* Eye icon */}
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7"><path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7zm0 12a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
+                {watchedKeys.has(`${meta.type}:${contentId}`) ? (
+                  // Check icon
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7"><path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                ) : (
+                  // Eye icon
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7"><path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7zm0 12a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
+                )}
               </button>
 
               <button
@@ -567,7 +582,11 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
                       {/* Episode action buttons */}
                       <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                         {/* Mark as watched */}
-                        <button className="w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center" aria-label="Mark episode as watched">
+                        <button
+                          className="w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center"
+                          aria-label="Mark episode as watched"
+                          onClick={(e) => { e.stopPropagation(); toggleWatched(`${meta.type}:${contentId}:s${selectedSeason}:e${episodeNum}`); }}
+                        >
                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-white"><path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7zm0 12a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
                         </button>
                       </div>
