@@ -156,7 +156,7 @@ export default function HeroRotator({
         }}
       >
         {/* Sidebar blend + readability gradients */}
-        <div className="absolute left-0 top-0 bottom-0 w-[120px] bg-gradient-to-r from-black to-transparent" />
+        <div className="absolute left-0 top-0 bottom-0 w-[60px] bg-gradient-to-r from-black/25 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/50 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
         <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-b from-transparent to-black/70" />
