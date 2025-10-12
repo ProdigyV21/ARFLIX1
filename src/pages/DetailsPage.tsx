@@ -478,7 +478,7 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
       </div>
 
       {(meta.type === 'series' || meta.type === 'anime') && seasons.length > 0 && (
-        <div className="relative bg-transparent -mt-6 pt-2 pb-8">
+        <div className="relative z-10 bg-transparent -mt-16 md:-mt-20 pt-0 pb-8">
           <div className="pl-[102px] pr-8">
           <div className="mb-8">
             <h2 className="text-3xl font-bold mb-4">Seasons</h2>
@@ -579,6 +579,12 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
               profile: actor.profile,
               profileUrl: actor.profileUrl
             }))}
+            onNavigate={(id, t) => {
+              onNavigate('details', {
+                id,
+                type: t
+              });
+            }}
             className="mb-12"
           />
         )}

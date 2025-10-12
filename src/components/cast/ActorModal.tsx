@@ -6,6 +6,7 @@ import MediaCard16x9 from '../media/MediaCard16x9';
 interface ActorModalProps {
   actor: CastMember;
   onClose: () => void;
+  onNavigate?: (id: string, type: 'movie' | 'series') => void;
 }
 
 interface ActorDetails {
@@ -20,7 +21,7 @@ interface ActorDetails {
   }>;
 }
 
-export default function ActorModal({ actor, onClose }: ActorModalProps) {
+export default function ActorModal({ actor, onClose, onNavigate }: ActorModalProps) {
   const [details, setDetails] = useState<ActorDetails | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -177,10 +178,7 @@ export default function ActorModal({ actor, onClose }: ActorModalProps) {
                             image16x9: item.poster || '',
                             year: item.year?.toString()
                           }}
-                          onClick={() => {
-                            // Handle navigation
-                            console.log('Navigate to:', item.id, item.type);
-                          }}
+                          onClick={() => onNavigate?.(item.id, item.type)}
                         />
                       </div>
                     ))}

@@ -13,9 +13,10 @@ export interface CastMember {
 interface CastCarouselProps {
   cast: CastMember[];
   className?: string;
+  onNavigate?: (id: string, type: 'movie' | 'series') => void;
 }
 
-export default function CastCarousel({ cast, className = '' }: CastCarouselProps) {
+export default function CastCarousel({ cast, className = '', onNavigate }: CastCarouselProps) {
   const [selectedActor, setSelectedActor] = useState<CastMember | null>(null);
 
   if (cast.length === 0) return null;
@@ -66,6 +67,7 @@ export default function CastCarousel({ cast, className = '' }: CastCarouselProps
       {selectedActor && (
         <ActorModal
           actor={selectedActor}
+          onNavigate={onNavigate}
           onClose={() => setSelectedActor(null)}
         />
       )}
