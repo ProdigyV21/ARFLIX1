@@ -32,8 +32,8 @@ export default function HeroRotator({
         
         // Fetch top 3 trending movies and TV shows
         const [trendingMovies, trendingTV] = await Promise.all([
-          metadataProvider.getCatalog({ id: 'trending_movies', type: 'movie', limit: 3 }),
-          metadataProvider.getCatalog({ id: 'trending_tv', type: 'series', limit: 3 })
+          metadataProvider.getCatalog('movie', 'trending_movies', { limit: 3 }),
+          metadataProvider.getCatalog('series', 'trending_tv', { limit: 3 })
         ]);
 
         // Combine into one pool

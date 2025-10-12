@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { Play, ArrowLeft, Loader2, Plus, Info, PlayCircle } from 'lucide-react';
+import { Play, ArrowLeft, Loader2, Plus, Check, Info, PlayCircle } from 'lucide-react';
 import { useFocusManager, useFocusable } from '../lib/focus';
 import { fetchSeasons, fetchEpisodes, fetchMeta } from '../lib/api';
 import CastCarousel from '../components/cast/CastCarousel';
@@ -455,9 +455,15 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
 
               <button
                 data-focusable="true"
+                onClick={() => handleWatchlistToggle(contentId, watchlistIds.has(contentId))}
                 className="flex items-center justify-center w-14 h-14 bg-white/20 backdrop-blur text-white rounded-full hover:bg-white/30 transition-all"
+                aria-label={watchlistIds.has(contentId) ? 'Remove from watchlist' : 'Add to watchlist'}
               >
-                <Plus className="w-7 h-7" />
+                {watchlistIds.has(contentId) ? (
+                  <Check className="w-7 h-7" />
+                ) : (
+                  <Plus className="w-7 h-7" />
+                )}
               </button>
 
               <button

@@ -127,19 +127,24 @@ video::cue {
 /* Subtitle positioning - ensure safe margin above controls */
 video::-webkit-media-text-track-container {
   overflow: visible !important;
-  position: absolute;
+  position: absolute !important;
   bottom: var(--subs-bottom-margin) !important;
-  width: 100%;
-  text-align: center;
-  padding: 0 5%;
-  box-sizing: border-box;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  text-align: center !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: flex-end !important;
+  padding: 0 5% !important;
+  box-sizing: border-box !important;
 }
 
 video::-webkit-media-text-track-display {
   overflow: visible !important;
-  max-width: var(--subs-max-width);
-  margin: 0 auto;
-  width: 100%;
-  padding: 0 5%;
-  box-sizing: border-box;
+  max-width: var(--subs-max-width) !important;
+  margin: 0 auto !important;
+  width: auto !important;
+  text-align: center !important;
+  display: inline-block !important;
 }
