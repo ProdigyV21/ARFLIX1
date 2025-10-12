@@ -574,12 +574,17 @@ export function HomePage({ onNavigate }: HomePageProps) {
     autofocus: true,
   });
 
-  // Load watchlist from localStorage
+  // Load watchlist from localStorage (supports legacy format)
   useEffect(() => {
     try {
       const stored = localStorage.getItem('watchlist');
       if (stored) {
-        setWatchlistIds(new Set(JSON.parse(stored)));
+        const arr = JSON.parse(stored) as any[];
+        const keys: string[] = Array.isArray(arr)
+          ? arr.map((v) => typeof v === 'string' ? v : (v?.key || ''))
+              .filter(Boolean)
+          : [];
+        setWatchlistIds(new Set(keys));
       }
     } catch (error) {
       console.error('Failed to load watchlist:', error);
@@ -712,17 +717,21 @@ export function HomePage({ onNavigate }: HomePageProps) {
     // Optimistic UI update
     setWatchlistIds(prev => {
       const next = new Set(prev);
-      const itemId = 'id' in item ? item.id : (item.externalIds?.tmdb ? `tmdb:${item.externalIds.tmdb}` : '');
+      const baseId = 'id' in item ? (item.id as string) : (item.externalIds?.tmdb ? `tmdb:${item.externalIds.tmdb}` : '');
+      const type = ('type' in item ? (item as any).type : undefined) || 'movie';
+      const key = `${type}:${baseId}`;
       
       if (isInWatchlist) {
-        next.delete(itemId);
+        next.delete(key);
       } else {
-        next.add(itemId);
+        next.add(key);
       }
       
       // Persist to localStorage
       try {
-        localStorage.setItem('watchlist', JSON.stringify(Array.from(next)));
+        // Store as array of objects for future-proofing
+        const payload = Array.from(next).map(k => ({ key: k }));
+        localStorage.setItem('watchlist', JSON.stringify(payload));
       } catch (error) {
         console.error('Failed to save watchlist:', error);
       }

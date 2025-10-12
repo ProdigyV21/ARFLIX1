@@ -467,6 +467,16 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
                 )}
               </button>
 
+              {/* Mark as watched */}
+              <button
+                data-focusable="true"
+                className="flex items-center justify-center w-14 h-14 bg-white/20 backdrop-blur text-white rounded-full hover:bg-white/30 transition-all"
+                aria-label="Mark as watched"
+              >
+                {/* Eye icon */}
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-7 h-7"><path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7zm0 12a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
+              </button>
+
               <button
                 data-focusable="true"
                 className="flex items-center justify-center w-14 h-14 bg-white/20 backdrop-blur text-white rounded-full hover:bg-white/30 transition-all"
@@ -516,7 +526,7 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
                     <button
                       key={episode.id || episodeNum}
                       onClick={() => handlePlay(selectedSeason, episodeNum)}
-                      className="group text-left bg-white/5 rounded-lg overflow-hidden hover:bg-white/10 transition-all flex-shrink-0 w-[360px]"
+                      className="group text-left bg-white/5 rounded-lg overflow-hidden hover:bg-white/10 transition-all flex-shrink-0 w-[360px] relative"
                     >
                       <div className="relative aspect-video bg-gray-800 transition-transform duration-300 group-hover:scale-[1.03]">
                         {episode.still ? (
@@ -544,6 +554,13 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
                               {episode.runtime}m
                           </span>
                         )}
+                      </div>
+                      {/* Episode action buttons */}
+                      <div className="absolute top-2 right-2 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {/* Mark as watched */}
+                        <button className="w-10 h-10 rounded-full bg-black/50 hover:bg-black/70 flex items-center justify-center" aria-label="Mark episode as watched">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-white"><path d="M12 5c-7 0-10 7-10 7s3 7 10 7 10-7 10-7-3-7-10-7zm0 12a5 5 0 110-10 5 5 0 010 10zm0-8a3 3 0 100 6 3 3 0 000-6z"/></svg>
+                        </button>
                       </div>
                       {episode.airDate && (
                         <p className="text-xs text-white/50 mb-1">

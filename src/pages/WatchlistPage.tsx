@@ -27,7 +27,11 @@ export function WatchlistPage({ onNavigate }: WatchlistPageProps) {
     try {
       setLoading(true);
       const stored = localStorage.getItem('watchlist');
-      const ids: string[] = stored ? JSON.parse(stored) : [];
+      const arr = stored ? JSON.parse(stored) : [];
+      const keys: string[] = Array.isArray(arr)
+        ? arr.map((v: any) => typeof v === 'string' ? v : v?.key).filter(Boolean)
+        : [];
+      const ids = keys.map(k => (k.includes(':') ? k.split(':').slice(1).join(':') : k));
       if (!ids || ids.length === 0) {
         setItems([]);
         return;
