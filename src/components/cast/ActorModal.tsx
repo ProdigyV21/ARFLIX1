@@ -35,9 +35,19 @@ export default function ActorModal({ actor, onClose }: ActorModalProps) {
         const tmdbApiKey = '080380c1ad7b3967af3def25159e4374';
         
         // Fetch actor details
+        // If we don't have a numeric id, resolve by name first
+        let resolvedId = personId;
+        if (!/^\d+$/.test(resolvedId)) {
+          const searchRes = await fetch(`https://api.themoviedb.org/3/search/person?api_key=${tmdbApiKey}&language=en-US&query=${encodeURIComponent(actor.name)}&page=1&include_adult=false`);
+          const searchJson = await searchRes.json();
+          if (searchJson?.results?.length) {
+            resolvedId = String(searchJson.results[0].id);
+          }
+        }
+
         const [personResponse, creditsResponse] = await Promise.all([
-          fetch(`https://api.themoviedb.org/3/person/${personId}?api_key=${tmdbApiKey}&language=en-US`),
-          fetch(`https://api.themoviedb.org/3/person/${personId}/combined_credits?api_key=${tmdbApiKey}&language=en-US`)
+          fetch(`https://api.themoviedb.org/3/person/${resolvedId}?api_key=${tmdbApiKey}&language=en-US`),
+          fetch(`https://api.themoviedb.org/3/person/${resolvedId}/combined_credits?api_key=${tmdbApiKey}&language=en-US`)
         ]);
 
         if (!personResponse.ok || !creditsResponse.ok) {

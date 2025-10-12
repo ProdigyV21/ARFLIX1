@@ -332,7 +332,7 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
 
   return (
     <div ref={containerRef} className="min-h-screen -ml-[90px]">
-      <div className="relative min-h-[48vh]">
+      <div className="relative min-h-[72vh]">
         {(meta.backdrop || meta.background || meta.poster) ? (
           <div
             className="absolute inset-0 bg-cover bg-center"
@@ -478,7 +478,7 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
       </div>
 
       {(meta.type === 'series' || meta.type === 'anime') && seasons.length > 0 && (
-        <div className="relative bg-black pt-2 pb-6">
+        <div className="relative bg-transparent -mt-6 pt-2 pb-8">
           <div className="pl-[102px] pr-8">
           <div className="mb-8">
             <h2 className="text-3xl font-bold mb-4">Seasons</h2>
