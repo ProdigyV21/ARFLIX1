@@ -128,12 +128,12 @@ export default function ScrollCarousel({
   }, [scrollByPage]);
 
   return (
-    <div className={`relative group ${className}`}>
+    <div className={`relative group/carousel ${className}`}>
       {/* Left Arrow */}
       {canScrollLeft && (
         <button
           onClick={() => scrollByPage('left')}
-          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2 bg-black/70 hover:bg-black/90 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 focus:opacity-100"
+          className="absolute left-0 top-1/2 -translate-y-1/2 z-10 p-2 bg-black/70 hover:bg-black/90 text-white rounded-full opacity-0 group-hover/carousel:opacity-100 transition-opacity duration-200 focus:opacity-100"
           aria-label="Scroll left"
         >
           <ChevronLeft className="w-6 h-6" />
@@ -165,7 +165,7 @@ export default function ScrollCarousel({
       {canScrollRight && (
         <button
           onClick={() => scrollByPage('right')}
-          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-2 bg-black/70 hover:bg-black/90 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 focus:opacity-100"
+          className="absolute right-0 top-1/2 -translate-y-1/2 z-10 p-2 bg-black/70 hover:bg-black/90 text-white rounded-full opacity-0 group-hover/carousel:opacity-100 transition-opacity duration-200 focus:opacity-100"
           aria-label="Scroll right"
         >
           <ChevronRight className="w-6 h-6" />

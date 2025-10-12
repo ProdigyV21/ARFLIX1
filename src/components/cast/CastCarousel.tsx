@@ -32,7 +32,7 @@ export default function CastCarousel({ cast, className = '' }: CastCarouselProps
               <button
                 key={member.id}
                 onClick={() => setSelectedActor(member)}
-                className="flex-shrink-0 w-32 text-left group cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/50 rounded-lg"
+                className="flex-shrink-0 w-32 text-left group/cast cursor-pointer focus:outline-none focus:ring-2 focus:ring-white/50 rounded-lg"
                 aria-label={`View details for ${member.name}`}
               >
                 <div className="relative aspect-[2/3] mb-2 rounded-lg overflow-hidden bg-gray-800">
@@ -40,7 +40,7 @@ export default function CastCarousel({ cast, className = '' }: CastCarouselProps
                     <img
                       src={imageUrl}
                       alt={member.name}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                      className="w-full h-full object-cover group-hover/cast:scale-105 transition-transform duration-300"
                       loading="lazy"
                     />
                   ) : (
@@ -51,7 +51,7 @@ export default function CastCarousel({ cast, className = '' }: CastCarouselProps
                     </div>
                   )}
                 </div>
-                <p className="font-semibold text-sm line-clamp-1 mb-1 group-hover:text-blue-400 transition-colors">
+                <p className="font-semibold text-sm line-clamp-1 mb-1 group-hover/cast:text-blue-400 transition-colors">
                   {member.name}
                 </p>
                 <p className="text-xs text-gray-400 line-clamp-2">
