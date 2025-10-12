@@ -332,7 +332,7 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
 
   return (
     <div ref={containerRef} className="min-h-screen -ml-[90px]">
-      <div className="relative min-h-[85vh]">
+      <div className="relative min-h-[60vh]">
         {(meta.backdrop || meta.background || meta.poster) ? (
           <div
             className="absolute inset-0 bg-cover bg-center"
@@ -347,7 +347,7 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
           <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 via-black to-zinc-900" />
         )}
 
-        <div className="relative flex flex-col justify-start pt-24 pb-8 pl-[102px] pr-12">
+        <div className="relative flex flex-col justify-start pt-20 pb-6 pl-[102px] pr-12">
           <button
             ref={backRef}
             data-focusable="true"
@@ -478,7 +478,7 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
       </div>
 
       {(meta.type === 'series' || meta.type === 'anime') && seasons.length > 0 && (
-        <div className="relative bg-black pt-4 pb-8">
+        <div className="relative bg-black pt-2 pb-6">
           <div className="pl-[102px] pr-8">
           <div className="mb-8">
             <h2 className="text-3xl font-bold mb-4">Seasons</h2>
@@ -569,7 +569,7 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
         </div>
       )}
 
-      <div className="pl-[102px] pr-12 py-12 bg-black">
+      <div className="pl-[102px] pr-12 py-8 bg-black">
         {meta.cast && meta.cast.length > 0 && (
           <CastCarousel 
             cast={meta.cast.map((actor, index) => ({
