@@ -3,7 +3,14 @@ import { useState } from 'react';
 import { NormalizedStream } from '../../lib/player';
 import { Subtitle } from '../../lib/subtitles';
 
-type Tab = 'quality' | 'source' | 'subtitles' | 'speed';
+type Tab = 'quality' | 'source' | 'audio' | 'subtitles' | 'speed';
+
+export interface AudioTrack {
+  id: string;
+  language: string;
+  label: string;
+  channels?: string; // e.g., "2.0", "5.1", "Atmos"
+}
 
 type SettingsPanelProps = {
   visible: boolean;
@@ -15,11 +22,14 @@ type SettingsPanelProps = {
   subtitlesEnabled: boolean;
   currentSubtitle?: string;
   availableSubtitles?: Subtitle[];
+  availableAudioTracks?: AudioTrack[];
+  currentAudioTrack?: string;
   onClose: () => void;
   onQualityChange: (quality: number | 'auto') => void;
   onStreamChange: (stream: NormalizedStream) => void;
   onSpeedChange: (speed: number) => void;
   onSubtitleChange: (lang?: string) => void;
+  onAudioTrackChange?: (trackId: string) => void;
 };
 
 export function SettingsPanel({
@@ -32,11 +42,14 @@ export function SettingsPanel({
   subtitlesEnabled,
   currentSubtitle,
   availableSubtitles = [],
+  availableAudioTracks = [],
+  currentAudioTrack,
   onClose,
   onQualityChange,
   onStreamChange,
   onSpeedChange,
   onSubtitleChange,
+  onAudioTrackChange,
 }: SettingsPanelProps) {
   const [activeTab, setActiveTab] = useState<Tab>('quality');
 
@@ -67,13 +80,13 @@ export function SettingsPanel({
           </button>
         </div>
 
-        <div className="flex border-b border-neutral-800">
-          {(['quality', 'source', 'subtitles', 'speed'] as Tab[]).map((tab) => (
+        <div className="flex border-b border-neutral-800 overflow-x-auto">
+          {(['quality', 'source', 'audio', 'subtitles', 'speed'] as Tab[]).map((tab) => (
             <button
               key={tab}
               data-focusable="true"
               onClick={() => setActiveTab(tab)}
-              className={`flex-1 py-4 text-sm font-medium capitalize transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white/50 ${
+              className={`flex-1 py-4 px-2 text-sm font-medium capitalize transition-colors focus:outline-none focus:ring-2 focus:ring-inset focus:ring-white/50 whitespace-nowrap ${
                 activeTab === tab
                   ? 'text-white border-b-2 border-white'
                   : 'text-gray-400 hover:text-white'
@@ -182,6 +195,36 @@ export function SettingsPanel({
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {activeTab === 'audio' && (
+            <div className="space-y-2">
+              {availableAudioTracks.length === 0 ? (
+                <div className="text-sm text-gray-400 text-center py-8">
+                  No audio track options available.
+                  <div className="mt-2 text-white">Using default audio track</div>
+                </div>
+              ) : (
+                availableAudioTracks.map((track) => (
+                  <button
+                    key={track.id}
+                    data-focusable="true"
+                    onClick={() => onAudioTrackChange?.(track.id)}
+                    className={`w-full p-4 rounded-lg flex items-center justify-between transition-all hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/50 ${
+                      currentAudioTrack === track.id ? 'bg-white/10' : ''
+                    }`}
+                  >
+                    <div className="text-left">
+                      <div className="font-medium">{track.label}</div>
+                      {track.channels && (
+                        <div className="text-xs text-gray-400 mt-1">{track.channels}</div>
+                      )}
+                    </div>
+                    {currentAudioTrack === track.id && <Check className="w-5 h-5 flex-shrink-0" />}
+                  </button>
+                ))
+              )}
             </div>
           )}
 

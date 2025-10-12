@@ -2,6 +2,9 @@ import { useEffect, useState, useRef } from 'react';
 import { Play, ArrowLeft, Loader2, Plus, Info, PlayCircle } from 'lucide-react';
 import { useFocusManager, useFocusable } from '../lib/focus';
 import { fetchSeasons, fetchEpisodes, fetchMeta } from '../lib/api';
+import CastCarousel from '../components/cast/CastCarousel';
+import MoreLikeThis from '../components/recommendations/MoreLikeThis';
+import ScrollCarousel from '../components/common/ScrollCarousel';
 import type { Page } from '../types/navigation';
 
 interface DetailsPageProps {
@@ -87,6 +90,7 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
   const [selectedSeason, setSelectedSeason] = useState<number>(1);
   const [episodes, setEpisodes] = useState<Episode[]>([]);
   const [loadingEpisodes, setLoadingEpisodes] = useState(false);
+  const [watchlistIds, setWatchlistIds] = useState<Set<string>>(new Set());
 
   useFocusable(backRef);
   useFocusable(playRef);
@@ -95,6 +99,18 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
     onBack: onBack,
     autofocus: true,
   });
+
+  // Load watchlist from localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('watchlist');
+      if (stored) {
+        setWatchlistIds(new Set(JSON.parse(stored)));
+      }
+    } catch (error) {
+      console.error('Failed to load watchlist:', error);
+    }
+  }, []);
 
   useEffect(() => {
     loadMeta();
@@ -261,6 +277,27 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
       // Try to open in new window as YouTube embed restrictions can block iframe embedding
       window.open(`https://www.youtube.com/watch?v=${trailerKey}`, '_blank');
     }
+  }
+
+  function handleWatchlistToggle(id: string, isInWatchlist: boolean) {
+    setWatchlistIds(prev => {
+      const next = new Set(prev);
+      if (isInWatchlist) {
+        next.delete(id);
+      } else {
+        next.add(id);
+      }
+      try {
+        localStorage.setItem('watchlist', JSON.stringify(Array.from(next)));
+      } catch (error) {
+        console.error('Failed to save watchlist:', error);
+      }
+      return next;
+    });
+  }
+
+  function handleItemClick(id: string, type: 'movie' | 'series') {
+    onNavigate('details', { id, type });
   }
 
   if (loading) {
@@ -463,7 +500,7 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
           ) : (
             <div>
               <h3 className="text-2xl font-bold mb-6">Episodes</h3>
-              <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+              <ScrollCarousel id={`episodes-s${selectedSeason}`} className="pb-4">
                 {episodes.map((episode) => {
                   const episodeNum = episode.episodeNumber || episode.number || 0;
                   const episodeTitle = episode.title || episode.name || `Episode ${episodeNum}`;
@@ -519,7 +556,7 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
                   </button>
                 );
                 })}
-              </div>
+              </ScrollCarousel>
             </div>
           )}
           </div>
@@ -528,33 +565,26 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
 
       <div className="pl-[102px] pr-12 py-12 bg-black">
         {meta.cast && meta.cast.length > 0 && (
-          <div className="mb-12">
-            <h2 className="text-3xl font-bold mb-6">Cast</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-6">
-              {meta.cast.map((actor, index) => (
-                <div key={index} className="text-center">
-                  <div className="aspect-[2/3] mb-3 rounded-lg overflow-hidden bg-white/5">
-                    {(actor.profile || actor.profileUrl) ? (
-                      <img
-                        src={actor.profile || actor.profileUrl}
-                        alt={actor.name}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center bg-white/10">
-                        <span className="text-4xl text-white/30">👤</span>
-                      </div>
-                    )}
-                  </div>
-                  <p className="font-semibold text-sm mb-1 line-clamp-1">{actor.name}</p>
-                  {actor.character && (
-                    <p className="text-xs text-white/60 line-clamp-2">{actor.character}</p>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
+          <CastCarousel 
+            cast={meta.cast.map((actor, index) => ({
+              id: `cast-${index}`,
+              name: actor.name,
+              character: actor.character || '',
+              profile: actor.profile,
+              profileUrl: actor.profileUrl
+            }))}
+            className="mb-12"
+          />
         )}
+
+        <MoreLikeThis
+          contentId={contentId}
+          contentType={contentType === 'series' || contentType === 'anime' ? 'series' : 'movie'}
+          onItemClick={handleItemClick}
+          watchlistIds={watchlistIds}
+          onWatchlistToggle={handleWatchlistToggle}
+          className="mb-12"
+        />
 
         {(meta.director || (meta.creators && meta.creators.length > 0)) && (
           <div>

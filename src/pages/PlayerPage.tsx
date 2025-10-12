@@ -4,6 +4,7 @@ import { useMediaEngine, getAvailableQualities, setQuality, getCurrentQuality, /
 import type { NormalizedStream } from '../lib/player';
 import { PlayerControls } from '../components/player/PlayerControls';
 import { SettingsPanel } from '../components/player/SettingsPanel';
+import PlayerLoadingScreen from '../components/player/PlayerLoadingScreen';
 import { saveProgress, getProgress, shouldShowResumePrompt, WatchProgress } from '../lib/progress';
 import { fetchStreams } from '../lib/api';
 import { type Subtitle } from '../lib/subtitles';
@@ -996,6 +997,14 @@ export function PlayerPage({
         playsInline
         crossOrigin="anonymous"
         onClick={handlePlayPause}
+      />
+
+      {/* Loading Screen */}
+      <PlayerLoadingScreen
+        poster={poster}
+        title={title}
+        isBuffering={isBuffering}
+        show={loading || (!currentStream && !error)}
       />
 
       {showIncompatibleSheet && (

@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { ExternalLink } from 'lucide-react';
-import HeroCarousel from '../components/hero/HeroCarousel';
+import HeroRotator from '../components/hero/HeroRotator';
+import ScrollCarousel from '../components/common/ScrollCarousel';
 import MediaCard16x9 from '../components/media/MediaCard16x9';
 import { useFocusManager, useFocusable } from '../lib/focus';
 import { catalogAPI, type CatalogItem, type HomeRow } from '../lib/catalog';
@@ -8,6 +9,7 @@ import { addonAPI } from '../lib/api';
 import { getContinueWatching, saveProgress, type WatchProgress } from '../lib/progress';
 import type { HeroItem } from '../lib/tmdb';
 import type { Page } from '../types/navigation';
+import type { Title } from '../lib/meta/types';
 
 interface HomePageProps {
   onNavigate: (page: Page, data?: any) => void;
@@ -561,6 +563,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
   const [loading, setLoading] = useState(true);
   const [hasAddons, setHasAddons] = useState(false);
   const [selectedItem, setSelectedItem] = useState<string | null>(null);
+  const [watchlistIds, setWatchlistIds] = useState<Set<string>>(new Set());
 
   useFocusable(watchRef);
   useFocusable(infoRef);
@@ -570,6 +573,18 @@ export function HomePage({ onNavigate }: HomePageProps) {
     onBack: () => {},
     autofocus: true,
   });
+
+  // Load watchlist from localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('watchlist');
+      if (stored) {
+        setWatchlistIds(new Set(JSON.parse(stored)));
+      }
+    } catch (error) {
+      console.error('Failed to load watchlist:', error);
+    }
+  }, []);
 
   useEffect(() => {
     loadContent();
@@ -693,6 +708,29 @@ export function HomePage({ onNavigate }: HomePageProps) {
     setSelectedItem(item.id);
   }
 
+  function handleWatchlistToggle(item: Title | CatalogItem, isInWatchlist: boolean) {
+    // Optimistic UI update
+    setWatchlistIds(prev => {
+      const next = new Set(prev);
+      const itemId = 'id' in item ? item.id : (item.externalIds?.tmdb ? `tmdb:${item.externalIds.tmdb}` : '');
+      
+      if (isInWatchlist) {
+        next.delete(itemId);
+      } else {
+        next.add(itemId);
+      }
+      
+      // Persist to localStorage
+      try {
+        localStorage.setItem('watchlist', JSON.stringify(Array.from(next)));
+      } catch (error) {
+        console.error('Failed to save watchlist:', error);
+      }
+      
+      return next;
+    });
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -706,17 +744,21 @@ export function HomePage({ onNavigate }: HomePageProps) {
 
   return (
     <div ref={containerRef} className="min-h-screen">
-      <HeroCarousel
-        onPlayClick={(item: HeroItem) => {
+      <HeroRotator
+        onPlayClick={(item: Title) => {
           if (!hasAddons) {
             onNavigate('settings');
             return;
           }
-          setSelectedItem(item.id);
+          const itemId = item.externalIds?.tmdb ? `tmdb:${item.externalIds.tmdb}` : item.id;
+          setSelectedItem(itemId);
         }}
-        onInfoClick={(item: HeroItem) => {
-          setSelectedItem(item.id);
+        onInfoClick={(item: Title) => {
+          const itemId = item.externalIds?.tmdb ? `tmdb:${item.externalIds.tmdb}` : item.id;
+          setSelectedItem(itemId);
         }}
+        onWatchlistClick={handleWatchlistToggle}
+        watchlistIds={watchlistIds}
       />
 
       {!hasAddons && (
@@ -742,7 +784,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
       {continueWatching.length > 0 && (
         <section className="px-8 mb-6">
           <h2 className="text-3xl font-bold mb-6">Continue Watching</h2>
-          <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
+          <ScrollCarousel id="continue-watching" className="pb-4">
             {continueWatching.map((item, index) => {
               return (
                 <div key={`${item.id}-${item.title}-${index}`} className="flex-shrink-0 w-[360px]">
@@ -762,7 +804,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
                 </div>
               );
             })}
-          </div>
+          </ScrollCarousel>
         </section>
       )}
 
@@ -773,7 +815,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
         return (
           <section key={rowIndex} className="px-8 mb-6">
             <h2 className="text-3xl font-bold mb-6">{row.title}</h2>
-            <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-hide">
+            <ScrollCarousel id={row.id} className="pb-4">
               {row.items.map((item) => (
                 <div key={item.id} className="flex-shrink-0 w-[360px]">
                   <MediaCard16x9
@@ -784,12 +826,12 @@ export function HomePage({ onNavigate }: HomePageProps) {
                       year: item.year?.toString()
                     }}
                     onClick={() => {
-                      handleItemClick(item);
+                        handleItemClick(item);
                     }}
                   />
                 </div>
               ))}
-            </div>
+            </ScrollCarousel>
           </section>
         );
       })}
