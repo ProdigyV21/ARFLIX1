@@ -1,4 +1,4 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useCallback } from 'react';
 
 export type FocusDirection = 'up' | 'down' | 'left' | 'right';
 

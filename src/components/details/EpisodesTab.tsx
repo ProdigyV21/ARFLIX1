@@ -2,8 +2,6 @@ import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Play } from 'lucide-react';
 import { fetchEpisodes } from '../../lib/api';
 
-const API_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
-
 interface Episode {
   id?: string | number;
   episode_number?: number;

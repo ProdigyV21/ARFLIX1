@@ -1,4 +1,4 @@
-import { Check, ChevronRight, X } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import { useState } from 'react';
 import { NormalizedStream } from '../../lib/player';
 import { Subtitle } from '../../lib/subtitles';

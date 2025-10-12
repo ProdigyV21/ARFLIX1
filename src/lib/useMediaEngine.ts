@@ -1,6 +1,6 @@
 import { useRef, useCallback } from 'react';
 import Hls from 'hls.js';
-import dashjs from 'dashjs';
+import * as dashjs from 'dashjs';
 
 export type Engine = "native" | "hls" | "dash";
 
@@ -68,7 +68,7 @@ export async function attachSource(
         onManifestParsed?.();
       });
 
-      hls.on(Hls.Events.ERROR, (event, data) => {
+      hls.on(Hls.Events.ERROR, (_event, data) => {
         console.error('HLS Error:', data);
         if (data.fatal) {
           const error = new Error(`HLS Fatal: ${data.type} - ${data.details}`);
@@ -160,7 +160,7 @@ export function getAvailableQualities(engine: AttachResult): number[] {
   }
 
   if (engine.engine === "dash" && engine.dash) {
-    const bitrateList = engine.dash.getBitrateInfoListFor("video");
+    const bitrateList = (engine.dash as any).getBitrateInfoListFor?.("video");
     return bitrateList?.map((b: any) => b.height).filter(Boolean) || [];
   }
 
@@ -187,7 +187,7 @@ export function setQuality(engine: AttachResult, qualityHeight: number | "auto")
         },
       });
     } else {
-      const bitrateList = engine.dash.getBitrateInfoListFor("video");
+      const bitrateList = (engine.dash as any).getBitrateInfoListFor?.("video");
       const quality = bitrateList?.find((b: any) => b.height === qualityHeight);
       if (quality) {
         engine.dash.updateSettings({
@@ -195,7 +195,7 @@ export function setQuality(engine: AttachResult, qualityHeight: number | "auto")
             abr: { autoSwitchBitrate: { video: false } },
           },
         });
-        engine.dash.setQualityFor("video", quality.qualityIndex);
+        (engine.dash as any).setQualityFor?.("video", quality.qualityIndex);
       }
     }
   }
@@ -207,12 +207,12 @@ export function getCurrentQuality(engine: AttachResult): number | "auto" | null 
   }
 
   if (engine.engine === "dash" && engine.dash) {
-    const settings = engine.dash.getSettings();
+    const settings = (engine.dash as any).getSettings?.() || {};
     if (settings.streaming?.abr?.autoSwitchBitrate?.video) {
       return "auto";
     }
-    const currentQuality = engine.dash.getQualityFor("video");
-    const bitrateList = engine.dash.getBitrateInfoListFor("video");
+    const currentQuality = (engine.dash as any).getQualityFor?.("video");
+    const bitrateList = (engine.dash as any).getBitrateInfoListFor?.("video");
     return bitrateList?.[currentQuality]?.height || null;
   }
 
@@ -229,7 +229,7 @@ export function getAudioTracks(engine: AttachResult): Array<{ id: number; label:
   }
 
   if (engine.engine === "dash" && engine.dash) {
-    const tracks = engine.dash.getBitrateInfoListFor("audio");
+    const tracks = (engine.dash as any).getBitrateInfoListFor?.("audio");
     return tracks?.map((track: any, idx: number) => ({
       id: idx,
       label: track.label || `Track ${idx + 1}`,
@@ -246,6 +246,6 @@ export function setAudioTrack(engine: AttachResult, trackId: number) {
   }
 
   if (engine.engine === "dash" && engine.dash) {
-    engine.dash.setCurrentTrack(engine.dash.getTracksFor("audio")[trackId]);
+    (engine.dash as any).setCurrentTrack?.((engine.dash as any).getTracksFor?.("audio")[trackId]);
   }
 }

@@ -2,20 +2,18 @@ import { supabase } from './supabase';
 
 const API_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
-async function getAuthHeaders() {
+async function getAuthHeaders(): Promise<Record<string, string>> {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
     // For development, allow unauthenticated requests to some endpoints
     console.warn('No session found, making unauthenticated request');
-    return {
-      'Content-Type': 'application/json',
-    };
+    return { 'Content-Type': 'application/json' } as Record<string, string>;
   }
 
   return {
-    'Authorization': `Bearer ${session.access_token}`,
+    Authorization: `Bearer ${session.access_token}`,
     'Content-Type': 'application/json',
-  };
+  } as Record<string, string>;
 }
 
 export const addonAPI = {
@@ -194,12 +192,12 @@ export async function fetchEpisodes(id: string, season?: number) {
     }
     
     // Fallback for other providers (Cinemeta)
-    const title = await metadataProvider.getTitle('series', id);
-    const seasonData = title.seasons?.find(s => s.seasonNumber === season);
-    
-    if (seasonData && seasonData.episodes) {
-      return { episodes: seasonData.episodes };
-    }
+      const title = await metadataProvider.getTitle('series', id);
+      const seasonData = (title as any).seasons?.find((s: any) => s.seasonNumber === season);
+      
+      if (seasonData && seasonData.episodes) {
+        return { episodes: seasonData.episodes };
+      }
 
     return { episodes: [] };
   } catch (error) {
@@ -228,13 +226,13 @@ export async function searchContent(query: string) {
       
       console.log('[API] Fallback search results - movies:', movies.length, 'series:', series.length);
       
-      const results = [...movies, ...series].map(item => ({
+      const results = [...movies, ...series].map((item: any) => ({
         id: item.id,
         type: item.type,
         title: item.title,
         year: item.year,
-        poster: item.poster,
-        backdrop: item.backdrop,
+        poster: item.posterUrl,
+        backdrop: item.backdropUrl,
         rating: item.rating,
       }));
       

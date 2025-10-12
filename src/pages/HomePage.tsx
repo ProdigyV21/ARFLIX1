@@ -7,10 +7,10 @@ import { catalogAPI, type CatalogItem, type HomeRow } from '../lib/catalog';
 import { addonAPI } from '../lib/api';
 import { getContinueWatching, saveProgress, type WatchProgress } from '../lib/progress';
 import type { HeroItem } from '../lib/tmdb';
-import { tmdbBackdrop } from '../lib/tmdbImages';
+import type { Page } from '../types/navigation';
 
 interface HomePageProps {
-  onNavigate: (page: string, data?: any) => void;
+  onNavigate: (page: Page, data?: any) => void;
 }
 
 async function getComprehensiveContent(): Promise<HomeRow[]> {
@@ -26,15 +26,15 @@ async function getComprehensiveContent(): Promise<HomeRow[]> {
       mostWatchedMovies,
       mostWatchedTV,
       anime,
-      netflixMovies,
+      _netflixMovies,
       netflixTV,
-      disneyMovies,
+      _disneyMovies,
       disneyTV,
-      hboMovies,
+      _hboMovies,
       hboTV,
-      amazonMovies,
+      _amazonMovies,
       amazonTV,
-      huluMovies,
+      _huluMovies,
       huluTV,
       koreanMovies,
       koreanTV,
@@ -76,7 +76,6 @@ async function getComprehensiveContent(): Promise<HomeRow[]> {
       mostWatchedMovies: mostWatchedMovies.length,
       mostWatchedTV: mostWatchedTV.length,
       anime: anime.length,
-      netflixMovies: netflixMovies.length,
       netflixTV: netflixTV.length,
     });
 
@@ -87,14 +86,20 @@ async function getComprehensiveContent(): Promise<HomeRow[]> {
       rows.push({
         id: 'trending-movies',
         title: 'Trending Movies',
-        items: trendingMovies.map(title => ({
-          id: title.id,
+        items: trendingMovies.map((title): CatalogItem => ({
+          id: title.externalIds.tmdb ? `tmdb:${title.externalIds.tmdb}` : title.id,
           type: title.type,
           title: title.title,
           year: title.year,
+          overview: title.overview,
           poster: title.posterUrl,
           backdrop: title.backdropUrl,
           rating: title.rating,
+          source: title.source,
+          sourceRef: {
+            imdbId: title.externalIds.imdb,
+            tmdbId: title.externalIds.tmdb ? parseInt(title.externalIds.tmdb) : undefined,
+          },
         }))
       });
     }
@@ -103,14 +108,20 @@ async function getComprehensiveContent(): Promise<HomeRow[]> {
       rows.push({
         id: 'trending-tv',
         title: 'Trending TV Shows',
-        items: trendingTV.map(title => ({
-          id: title.id,
+        items: trendingTV.map((title): CatalogItem => ({
+          id: title.externalIds.tmdb ? `tmdb:${title.externalIds.tmdb}` : title.id,
           type: title.type,
           title: title.title,
           year: title.year,
+          overview: title.overview,
           poster: title.posterUrl,
           backdrop: title.backdropUrl,
           rating: title.rating,
+          source: title.source,
+          sourceRef: {
+            imdbId: title.externalIds.imdb,
+            tmdbId: title.externalIds.tmdb ? parseInt(title.externalIds.tmdb) : undefined,
+          },
         }))
       });
     }
@@ -119,14 +130,20 @@ async function getComprehensiveContent(): Promise<HomeRow[]> {
       rows.push({
         id: 'most-watched-tv',
         title: 'Most Watched This Week',
-        items: mostWatchedTV.map(title => ({
-          id: title.id,
+        items: mostWatchedTV.map((title): CatalogItem => ({
+          id: title.externalIds.tmdb ? `tmdb:${title.externalIds.tmdb}` : title.id,
           type: title.type,
           title: title.title,
           year: title.year,
+          overview: title.overview,
           poster: title.posterUrl,
           backdrop: title.backdropUrl,
           rating: title.rating,
+          source: title.source,
+          sourceRef: {
+            imdbId: title.externalIds.imdb,
+            tmdbId: title.externalIds.tmdb ? parseInt(title.externalIds.tmdb) : undefined,
+          },
         }))
       });
     }
@@ -135,14 +152,20 @@ async function getComprehensiveContent(): Promise<HomeRow[]> {
       rows.push({
         id: 'trending-anime',
         title: 'Trending Airing Anime',
-        items: anime.map(title => ({
-          id: title.id,
+        items: anime.map((title): CatalogItem => ({
+          id: title.externalIds.tmdb ? `tmdb:${title.externalIds.tmdb}` : title.id,
           type: title.type,
           title: title.title,
           year: title.year,
+          overview: title.overview,
           poster: title.posterUrl,
           backdrop: title.backdropUrl,
           rating: title.rating,
+          source: title.source,
+          sourceRef: {
+            imdbId: title.externalIds.imdb,
+            tmdbId: title.externalIds.tmdb ? parseInt(title.externalIds.tmdb) : undefined,
+          },
         }))
       });
     }
@@ -152,14 +175,20 @@ async function getComprehensiveContent(): Promise<HomeRow[]> {
       rows.push({
         id: 'netflix-trending',
         title: 'Netflix Trending Series',
-        items: netflixTV.map(title => ({
-          id: title.id,
+        items: netflixTV.map((title): CatalogItem => ({
+          id: title.externalIds.tmdb ? `tmdb:${title.externalIds.tmdb}` : title.id,
           type: title.type,
           title: title.title,
           year: title.year,
+          overview: title.overview,
           poster: title.posterUrl,
           backdrop: title.backdropUrl,
           rating: title.rating,
+          source: title.source,
+          sourceRef: {
+            imdbId: title.externalIds.imdb,
+            tmdbId: title.externalIds.tmdb ? parseInt(title.externalIds.tmdb) : undefined,
+          },
         }))
       });
     }
@@ -168,14 +197,20 @@ async function getComprehensiveContent(): Promise<HomeRow[]> {
       rows.push({
         id: 'disney-trending',
         title: 'Disney+ Trending Series',
-        items: disneyTV.map(title => ({
-          id: title.id,
+        items: disneyTV.map((title): CatalogItem => ({
+          id: title.externalIds.tmdb ? `tmdb:${title.externalIds.tmdb}` : title.id,
           type: title.type,
           title: title.title,
           year: title.year,
+          overview: title.overview,
           poster: title.posterUrl,
           backdrop: title.backdropUrl,
           rating: title.rating,
+          source: title.source,
+          sourceRef: {
+            imdbId: title.externalIds.imdb,
+            tmdbId: title.externalIds.tmdb ? parseInt(title.externalIds.tmdb) : undefined,
+          },
         }))
       });
     }
@@ -184,14 +219,20 @@ async function getComprehensiveContent(): Promise<HomeRow[]> {
       rows.push({
         id: 'hbo-trending',
         title: 'HBO Max Trending Series',
-        items: hboTV.map(title => ({
-          id: title.id,
+        items: hboTV.map((title): CatalogItem => ({
+          id: title.externalIds.tmdb ? `tmdb:${title.externalIds.tmdb}` : title.id,
           type: title.type,
           title: title.title,
           year: title.year,
+          overview: title.overview,
           poster: title.posterUrl,
           backdrop: title.backdropUrl,
           rating: title.rating,
+          source: title.source,
+          sourceRef: {
+            imdbId: title.externalIds.imdb,
+            tmdbId: title.externalIds.tmdb ? parseInt(title.externalIds.tmdb) : undefined,
+          },
         }))
       });
     }
@@ -200,14 +241,20 @@ async function getComprehensiveContent(): Promise<HomeRow[]> {
       rows.push({
         id: 'amazon-trending',
         title: 'Prime Video Trending Series',
-        items: amazonTV.map(title => ({
-          id: title.id,
+        items: amazonTV.map((title): CatalogItem => ({
+          id: title.externalIds.tmdb ? `tmdb:${title.externalIds.tmdb}` : title.id,
           type: title.type,
           title: title.title,
           year: title.year,
+          overview: title.overview,
           poster: title.posterUrl,
           backdrop: title.backdropUrl,
           rating: title.rating,
+          source: title.source,
+          sourceRef: {
+            imdbId: title.externalIds.imdb,
+            tmdbId: title.externalIds.tmdb ? parseInt(title.externalIds.tmdb) : undefined,
+          },
         }))
       });
     }
@@ -216,14 +263,20 @@ async function getComprehensiveContent(): Promise<HomeRow[]> {
       rows.push({
         id: 'hulu-trending',
         title: 'Hulu Trending Series',
-        items: huluTV.map(title => ({
-          id: title.id,
+        items: huluTV.map((title): CatalogItem => ({
+          id: title.externalIds.tmdb ? `tmdb:${title.externalIds.tmdb}` : title.id,
           type: title.type,
           title: title.title,
           year: title.year,
+          overview: title.overview,
           poster: title.posterUrl,
           backdrop: title.backdropUrl,
           rating: title.rating,
+          source: title.source,
+          sourceRef: {
+            imdbId: title.externalIds.imdb,
+            tmdbId: title.externalIds.tmdb ? parseInt(title.externalIds.tmdb) : undefined,
+          },
         }))
       });
     }
@@ -233,14 +286,20 @@ async function getComprehensiveContent(): Promise<HomeRow[]> {
       rows.push({
         id: 'korean-tv',
         title: 'Top Korean Series',
-        items: koreanTV.map(title => ({
-          id: title.id,
+        items: koreanTV.map((title): CatalogItem => ({
+          id: title.externalIds.tmdb ? `tmdb:${title.externalIds.tmdb}` : title.id,
           type: title.type,
           title: title.title,
           year: title.year,
+          overview: title.overview,
           poster: title.posterUrl,
           backdrop: title.backdropUrl,
           rating: title.rating,
+          source: title.source,
+          sourceRef: {
+            imdbId: title.externalIds.imdb,
+            tmdbId: title.externalIds.tmdb ? parseInt(title.externalIds.tmdb) : undefined,
+          },
         }))
       });
     }
@@ -249,14 +308,20 @@ async function getComprehensiveContent(): Promise<HomeRow[]> {
       rows.push({
         id: 'indian-tv',
         title: 'Top Indian Series',
-        items: indianTV.map(title => ({
-          id: title.id,
+        items: indianTV.map((title): CatalogItem => ({
+          id: title.externalIds.tmdb ? `tmdb:${title.externalIds.tmdb}` : title.id,
           type: title.type,
           title: title.title,
           year: title.year,
+          overview: title.overview,
           poster: title.posterUrl,
           backdrop: title.backdropUrl,
           rating: title.rating,
+          source: title.source,
+          sourceRef: {
+            imdbId: title.externalIds.imdb,
+            tmdbId: title.externalIds.tmdb ? parseInt(title.externalIds.tmdb) : undefined,
+          },
         }))
       });
     }
@@ -265,14 +330,20 @@ async function getComprehensiveContent(): Promise<HomeRow[]> {
       rows.push({
         id: 'spanish-tv',
         title: 'Top Spanish Series',
-        items: spanishTV.map(title => ({
-          id: title.id,
+        items: spanishTV.map((title): CatalogItem => ({
+          id: title.externalIds.tmdb ? `tmdb:${title.externalIds.tmdb}` : title.id,
           type: title.type,
           title: title.title,
           year: title.year,
+          overview: title.overview,
           poster: title.posterUrl,
           backdrop: title.backdropUrl,
           rating: title.rating,
+          source: title.source,
+          sourceRef: {
+            imdbId: title.externalIds.imdb,
+            tmdbId: title.externalIds.tmdb ? parseInt(title.externalIds.tmdb) : undefined,
+          },
         }))
       });
     }
@@ -281,14 +352,20 @@ async function getComprehensiveContent(): Promise<HomeRow[]> {
       rows.push({
         id: 'japanese-tv',
         title: 'Top Japanese Series',
-        items: japaneseTV.map(title => ({
-          id: title.id,
+        items: japaneseTV.map((title): CatalogItem => ({
+          id: title.externalIds.tmdb ? `tmdb:${title.externalIds.tmdb}` : title.id,
           type: title.type,
           title: title.title,
           year: title.year,
+          overview: title.overview,
           poster: title.posterUrl,
           backdrop: title.backdropUrl,
           rating: title.rating,
+          source: title.source,
+          sourceRef: {
+            imdbId: title.externalIds.imdb,
+            tmdbId: title.externalIds.tmdb ? parseInt(title.externalIds.tmdb) : undefined,
+          },
         }))
       });
     }
@@ -298,14 +375,20 @@ async function getComprehensiveContent(): Promise<HomeRow[]> {
       rows.push({
         id: 'korean-movies',
         title: 'Top Korean Movies',
-        items: koreanMovies.map(title => ({
-          id: title.id,
+        items: koreanMovies.map((title): CatalogItem => ({
+          id: title.externalIds.tmdb ? `tmdb:${title.externalIds.tmdb}` : title.id,
           type: title.type,
           title: title.title,
           year: title.year,
+          overview: title.overview,
           poster: title.posterUrl,
           backdrop: title.backdropUrl,
           rating: title.rating,
+          source: title.source,
+          sourceRef: {
+            imdbId: title.externalIds.imdb,
+            tmdbId: title.externalIds.tmdb ? parseInt(title.externalIds.tmdb) : undefined,
+          },
         }))
       });
     }
@@ -314,14 +397,20 @@ async function getComprehensiveContent(): Promise<HomeRow[]> {
       rows.push({
         id: 'indian-movies',
         title: 'Top Indian Movies',
-        items: indianMovies.map(title => ({
-          id: title.id,
+        items: indianMovies.map((title): CatalogItem => ({
+          id: title.externalIds.tmdb ? `tmdb:${title.externalIds.tmdb}` : title.id,
           type: title.type,
           title: title.title,
           year: title.year,
+          overview: title.overview,
           poster: title.posterUrl,
           backdrop: title.backdropUrl,
           rating: title.rating,
+          source: title.source,
+          sourceRef: {
+            imdbId: title.externalIds.imdb,
+            tmdbId: title.externalIds.tmdb ? parseInt(title.externalIds.tmdb) : undefined,
+          },
         }))
       });
     }
@@ -330,14 +419,20 @@ async function getComprehensiveContent(): Promise<HomeRow[]> {
       rows.push({
         id: 'spanish-movies',
         title: 'Top Spanish Movies',
-        items: spanishMovies.map(title => ({
-          id: title.id,
+        items: spanishMovies.map((title): CatalogItem => ({
+          id: title.externalIds.tmdb ? `tmdb:${title.externalIds.tmdb}` : title.id,
           type: title.type,
           title: title.title,
           year: title.year,
+          overview: title.overview,
           poster: title.posterUrl,
           backdrop: title.backdropUrl,
           rating: title.rating,
+          source: title.source,
+          sourceRef: {
+            imdbId: title.externalIds.imdb,
+            tmdbId: title.externalIds.tmdb ? parseInt(title.externalIds.tmdb) : undefined,
+          },
         }))
       });
     }
@@ -346,14 +441,20 @@ async function getComprehensiveContent(): Promise<HomeRow[]> {
       rows.push({
         id: 'japanese-movies',
         title: 'Top Japanese Movies',
-        items: japaneseMovies.map(title => ({
-          id: title.id,
+        items: japaneseMovies.map((title): CatalogItem => ({
+          id: title.externalIds.tmdb ? `tmdb:${title.externalIds.tmdb}` : title.id,
           type: title.type,
           title: title.title,
           year: title.year,
+          overview: title.overview,
           poster: title.posterUrl,
           backdrop: title.backdropUrl,
           rating: title.rating,
+          source: title.source,
+          sourceRef: {
+            imdbId: title.externalIds.imdb,
+            tmdbId: title.externalIds.tmdb ? parseInt(title.externalIds.tmdb) : undefined,
+          },
         }))
       });
     }
@@ -379,7 +480,9 @@ function getFallbackContent(): HomeRow[] {
           year: 2010,
           poster: 'https://image.tmdb.org/t/p/w500/9gk7adHYeDvHkCSEqAvQNLV5Uge.jpg',
           backdrop: 'https://image.tmdb.org/t/p/w1280/s3TBrRGB1iav7gFOCNx3H31MoES.jpg',
-          rating: 8.4
+          rating: 8.4,
+          source: 'tmdb',
+          sourceRef: { tmdbId: 27205 },
         },
         {
           id: 'tmdb:155',
@@ -388,7 +491,9 @@ function getFallbackContent(): HomeRow[] {
           year: 2008,
           poster: 'https://image.tmdb.org/t/p/w500/qJ2tW6WMUDux911r6m7haRef0WH.jpg',
           backdrop: 'https://image.tmdb.org/t/p/w1280/hqkIcbrOHL86UncnHIsHVcVmzue.jpg',
-          rating: 9.0
+          rating: 9.0,
+          source: 'tmdb',
+          sourceRef: { tmdbId: 155 },
         },
         {
           id: 'tmdb:49026',
@@ -397,7 +502,9 @@ function getFallbackContent(): HomeRow[] {
           year: 2012,
           poster: 'https://image.tmdb.org/t/p/w500/vdAQxOnsxhgc6e1nxdV1nQiVYAX.jpg',
           backdrop: 'https://image.tmdb.org/t/p/w1280/85zHakxSGU6hP3TpUj8x3QdW2bZ.jpg',
-          rating: 8.2
+          rating: 8.2,
+          source: 'tmdb',
+          sourceRef: { tmdbId: 49026 },
         }
       ]
     },
@@ -412,7 +519,9 @@ function getFallbackContent(): HomeRow[] {
           year: 2011,
           poster: 'https://image.tmdb.org/t/p/w500/u3bZgnGQ9T01sWNhyveQz0wH0Hl.jpg',
           backdrop: 'https://image.tmdb.org/t/p/w1280/2OMB0ynKlyIenMJWI2Dy9IWT4c.jpg',
-          rating: 8.5
+          rating: 8.5,
+          source: 'tmdb',
+          sourceRef: { tmdbId: 1399 },
         },
         {
           id: 'tmdb:1396',
@@ -421,7 +530,9 @@ function getFallbackContent(): HomeRow[] {
           year: 2008,
           poster: 'https://image.tmdb.org/t/p/w500/ggFHVNu6YYI5L9pCfOacjizRGt.jpg',
           backdrop: 'https://image.tmdb.org/t/p/w1280/tsRy63Mu5cu8etL1X7ZLyf7UP1M.jpg',
-          rating: 9.5
+          rating: 9.5,
+          source: 'tmdb',
+          sourceRef: { tmdbId: 1396 },
         },
         {
           id: 'tmdb:1398',
@@ -430,7 +541,9 @@ function getFallbackContent(): HomeRow[] {
           year: 1999,
           poster: 'https://image.tmdb.org/t/p/w500/rTc7ZXdroqjkKivFPvCPX0Ru7uw.jpg',
           backdrop: 'https://image.tmdb.org/t/p/w1280/7c9UVPPiTPltouxRVY6N9uugaVA.jpg',
-          rating: 9.2
+          rating: 9.2,
+          source: 'tmdb',
+          sourceRef: { tmdbId: 1398 },
         }
       ]
     }

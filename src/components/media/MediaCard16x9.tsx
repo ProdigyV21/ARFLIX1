@@ -11,7 +11,7 @@ interface MediaCard16x9Props {
   showTitle?: boolean;
 }
 
-export default function MediaCard16x9({ item, onClick, showTitle = false }: MediaCard16x9Props) {
+export default function MediaCard16x9({ item, onClick, showTitle: _showTitle = false }: MediaCard16x9Props) {
   const [imageError, setImageError] = useState(false);
   const hasValidImage = item.image16x9 && (
     item.image16x9.includes('/t/p/') ||

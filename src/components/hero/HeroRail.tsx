@@ -7,7 +7,7 @@ interface HeroRailProps {
   activeId?: string;
 }
 
-export default function HeroRail({ items, onSelect, activeId }: HeroRailProps) {
+export default function HeroRail({ items, onSelect, activeId: _activeId }: HeroRailProps) {
   if (!items || items.length === 0) {
     return null;
   }

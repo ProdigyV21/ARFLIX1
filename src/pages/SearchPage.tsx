@@ -3,9 +3,10 @@ import { Search, Loader2 } from 'lucide-react';
 import MediaCard16x9 from '../components/media/MediaCard16x9';
 import { useFocusManager } from '../lib/focus';
 import { searchContent } from '../lib/api';
+import type { Page } from '../types/navigation';
 
 interface SearchPageProps {
-  onNavigate: (page: string, data?: any) => void;
+  onNavigate: (page: Page, data?: any) => void;
 }
 
 interface SearchResult {

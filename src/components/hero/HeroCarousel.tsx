@@ -25,7 +25,7 @@ export default function HeroCarousel({ onPlayClick, onInfoClick }: HeroCarouselP
     setLoading(false);
   }
 
-  const activeItem = items[activeIndex];
+  // activeItem not used
 
   if (loading) {
     return (
@@ -49,7 +49,6 @@ export default function HeroCarousel({ onPlayClick, onInfoClick }: HeroCarouselP
   }];
 
   const displayItems = items.length > 0 ? items : fallbackItems;
-  const displayItem = displayItems[activeIndex];
 
   const scrollTo = (index: number) => {
     setActiveIndex(index);
@@ -87,7 +86,7 @@ export default function HeroCarousel({ onPlayClick, onInfoClick }: HeroCarouselP
           }
         }}
       >
-        {displayItems.map((item, index) => (
+        {displayItems.map((item, _index) => (
           <div key={item.id} className="relative w-full h-[75vh] flex-shrink-0 snap-start">
             <div
               className="absolute inset-0 bg-cover bg-center"

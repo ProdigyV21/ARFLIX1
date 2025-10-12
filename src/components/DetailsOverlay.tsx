@@ -151,7 +151,7 @@ export function DetailsOverlay({ itemId, onClose, onPlay }: DetailsOverlayProps)
                   {onPlay && (
                     <button
                       data-focusable="true"
-                      onClick={onPlay}
+                      onClick={() => onPlay?.()}
                       className="flex items-center gap-3 px-8 py-4 bg-white text-black rounded-lg font-bold text-lg hover:bg-white/90 transition-all"
                     >
                       <Play className="w-6 h-6 fill-current" />

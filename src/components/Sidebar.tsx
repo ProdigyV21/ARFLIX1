@@ -1,13 +1,14 @@
 import { Home, Search, Bookmark, Settings } from 'lucide-react';
 import ArflixLogo from './ArflixLogo';
+import type { Page } from '../types/navigation';
 
 interface SidebarProps {
-  currentPage: string;
-  onNavigate: (page: string) => void;
+  currentPage: Page;
+  onNavigate: (page: Page) => void;
 }
 
 export function Sidebar({ currentPage, onNavigate }: SidebarProps) {
-  const navItems = [
+  const navItems: Array<{ id: Page; icon: any; label: string }> = [
     { id: 'home', icon: Home, label: 'Home' },
     { id: 'search', icon: Search, label: 'Search' },
     { id: 'watchlist', icon: Bookmark, label: 'Watchlist' },

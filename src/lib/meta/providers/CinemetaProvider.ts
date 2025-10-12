@@ -178,11 +178,7 @@ function extractEpisodes(item: CinemetaMeta, season: number): Episode[] {
 }
 
 export class CinemetaProvider implements MetadataProvider {
-  private language: string = 'en';
-
-  setLanguage(lang: string) {
-    this.language = lang;
-  }
+  setLanguage(_lang: string) {}
 
   async getCatalog(
     type: 'movie' | 'series',

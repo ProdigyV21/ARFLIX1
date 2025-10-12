@@ -1,19 +1,19 @@
 import { Search, Bell } from 'lucide-react';
-import { useState } from 'react';
 import ArflixLogo from './ArflixLogo';
+import type { Page } from '../types/navigation';
 
 interface NavbarProps {
-  currentPage: string;
-  onNavigate: (page: string) => void;
+  currentPage: Page;
+  onNavigate: (page: Page) => void;
 }
 
 export function Navbar({ currentPage, onNavigate }: NavbarProps) {
-  const navItems = [
+  const navItems: Array<{ id: Page; label: string }> = [
     { id: 'home', label: 'Home' },
-    { id: 'browse', label: 'Browse' },
-    { id: 'kids', label: 'Kids' },
-    { id: 'support', label: 'Support' },
-    { id: 'faq', label: 'FAQ' },
+    { id: 'search', label: 'Search' },
+    { id: 'addons', label: 'Add-ons' },
+    { id: 'watchlist', label: 'Watchlist' },
+    { id: 'settings', label: 'Settings' },
   ];
 
   return (

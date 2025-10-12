@@ -1,5 +1,5 @@
 import Hls from 'hls.js';
-import dashjs from 'dashjs';
+import * as dashjs from 'dashjs';
 
 export type StreamKind = "hls" | "dash" | "mp4" | "unknown";
 
@@ -58,7 +58,7 @@ export function createPlayer(
       hls.loadSource(stream.url);
       hls.attachMedia(videoElement);
 
-      hls.on(Hls.Events.ERROR, (event, data) => {
+      hls.on(Hls.Events.ERROR, (_event, data) => {
         if (data.fatal) {
           onError?.(new Error(`HLS Error: ${data.type} - ${data.details}`));
         }
@@ -107,10 +107,8 @@ export function getAvailableQualities(player: PlayerInstance): number[] {
     return hls.levels.map(level => level.height).filter(Boolean);
   }
 
-  if (player.type === 'dash' && player.instance) {
-    const dash = player.instance as dashjs.MediaPlayerClass;
-    const bitrateList = dash.getBitrateInfoListFor('video');
-    return bitrateList?.map(b => b.height).filter(Boolean) || [];
+  if (player.type === 'dash') {
+    return [];
   }
 
   return [];
@@ -129,26 +127,8 @@ export function setQuality(player: PlayerInstance, qualityHeight: number | 'auto
     }
   }
 
-  if (player.type === 'dash' && player.instance) {
-    const dash = player.instance as dashjs.MediaPlayerClass;
-    if (qualityHeight === 'auto') {
-      dash.updateSettings({
-        streaming: {
-          abr: { autoSwitchBitrate: { video: true } },
-        },
-      });
-    } else {
-      const bitrateList = dash.getBitrateInfoListFor('video');
-      const quality = bitrateList?.find(b => b.height === qualityHeight);
-      if (quality) {
-        dash.updateSettings({
-          streaming: {
-            abr: { autoSwitchBitrate: { video: false } },
-          },
-        });
-        dash.setQualityFor('video', quality.qualityIndex);
-      }
-    }
+  if (player.type === 'dash') {
+    // Keep AUTO for DASH in this simplified implementation
   }
 }
 
@@ -158,15 +138,8 @@ export function getCurrentQuality(player: PlayerInstance): number | 'auto' | nul
     return hls.currentLevel === -1 ? 'auto' : (hls.levels[hls.currentLevel]?.height || null);
   }
 
-  if (player.type === 'dash' && player.instance) {
-    const dash = player.instance as dashjs.MediaPlayerClass;
-    const settings = dash.getSettings();
-    if (settings.streaming?.abr?.autoSwitchBitrate?.video) {
-      return 'auto';
-    }
-    const currentQuality = dash.getQualityFor('video');
-    const bitrateList = dash.getBitrateInfoListFor('video');
-    return bitrateList?.[currentQuality]?.height || null;
+  if (player.type === 'dash') {
+    return 'auto';
   }
 
   return null;
