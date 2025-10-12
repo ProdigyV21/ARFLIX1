@@ -97,18 +97,7 @@ export default function HeroRotator({
     return () => clearInterval(interval);
   }, [items.length]);
 
-  const handlePrevious = useCallback(() => {
-    if (items.length <= 1) return;
-    setIsTransitioning(true);
-    setTimeout(() => {
-      setCurrentIndex(prev => {
-        const next = (prev - 1 + items.length) % items.length;
-        sessionStorage.setItem('hero-rotator-index', String(next));
-        return next;
-      });
-      setTimeout(() => setIsTransitioning(false), CROSSFADE_DURATION);
-    }, 100);
-  }, [items.length]);
+  // Previous handler not used (right arrow only)
 
   const handleNext = useCallback(() => {
     if (items.length <= 1) return;
@@ -236,29 +225,17 @@ export default function HeroRotator({
         </div>
       </div>
 
-      {/* Navigation Arrows */}
+      {/* Navigation Arrow (right only) */}
       {items.length > 1 && (
-        <>
-          <button
-            onClick={handlePrevious}
-            className="absolute left-4 top-1/2 -translate-y-1/2 p-3 bg-black/50 hover:bg-black/70 text-white rounded-full transition-all duration-200 backdrop-blur-sm z-10"
-            aria-label="Previous item"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          
-          <button
-            onClick={handleNext}
-            className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-black/50 hover:bg-black/70 text-white rounded-full transition-all duration-200 backdrop-blur-sm z-10"
-            aria-label="Next item"
-          >
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
-        </>
+        <button
+          onClick={handleNext}
+          className="absolute right-4 top-1/2 -translate-y-1/2 p-3 bg-black/50 hover:bg-black/70 text-white rounded-full transition-all duration-200 backdrop-blur-sm z-10"
+          aria-label="Next item"
+        >
+          <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
       )}
 
       {/* Progress Indicators */}
