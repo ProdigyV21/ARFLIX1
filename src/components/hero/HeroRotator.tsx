@@ -146,7 +146,7 @@ export default function HeroRotator({
     : currentItem.posterUrl?.replace(/w\d+/, 'w1280');
 
   return (
-    <div className="relative w-full h-[70vh] overflow-hidden">
+    <div className="relative w-full h-[70vh] overflow-hidden -ml-[90px]">
       {/* Backdrop Image with Crossfade */}
       <div 
         className={`absolute inset-0 bg-cover bg-center filter brightness-110 saturate-115 contrast-105 transition-opacity duration-${CROSSFADE_DURATION}`}
@@ -163,7 +163,7 @@ export default function HeroRotator({
       </div>
 
       {/* Content */}
-      <div className="relative h-full px-8 flex items-end pb-14 sm:pb-16 lg:pb-20">
+      <div className="relative h-full pl-[102px] pr-8 flex items-end pb-14 sm:pb-16 lg:pb-20">
         <div className="max-w-2xl space-y-4">
           {/* Title */}
           <h1 
