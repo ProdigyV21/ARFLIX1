@@ -342,7 +342,7 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
           >
             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-black/40" />
-            <div className="absolute bottom-0 left-0 right-0 h-24 bg-gradient-to-b from-transparent to-black" />
+            <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-b from-transparent to-black" />
           </div>
         ) : (
           <div className="absolute inset-0 bg-gradient-to-br from-zinc-900 via-black to-zinc-900" />
@@ -479,7 +479,7 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
       </div>
 
       {(meta.type === 'series' || meta.type === 'anime') && seasons.length > 0 && (
-        <div className="relative z-10 bg-transparent -mt-36 sm:-mt-44 md:-mt-56 lg:-mt-64 xl:-mt-72 pt-0 pb-8">
+        <div className="relative z-10 bg-transparent -mt-40 sm:-mt-52 md:-mt-64 lg:-mt-72 xl:-mt-80 pt-0 pb-8">
           <div className="pl-[102px] pr-8">
           <div className="mb-8">
             <h2 className="text-3xl font-bold mb-4">Seasons</h2>
