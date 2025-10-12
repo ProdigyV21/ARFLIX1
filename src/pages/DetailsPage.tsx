@@ -479,7 +479,7 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
       </div>
 
       {(meta.type === 'series' || meta.type === 'anime') && seasons.length > 0 && (
-        <div className="relative z-10 bg-transparent -mt-36 sm:-mt-48 md:-mt-60 lg:-mt-68 xl:-mt-76 pt-8 md:pt-10 pb-8">
+        <div className="relative z-10 bg-transparent -mt-40 sm:-mt-52 md:-mt-64 lg:-mt-72 xl:-mt-80 pt-3 md:pt-4 pb-8">
           <div className="pl-[102px] pr-8">
           <div className="mb-8">
             <h2 className="text-3xl font-bold mb-4">Seasons</h2>
