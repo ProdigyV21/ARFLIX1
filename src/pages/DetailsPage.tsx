@@ -570,7 +570,9 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
         </div>
       )}
 
-      <div className="pl-[102px] pr-12 py-8 bg-black">
+      <div className={meta.type === 'movie' 
+        ? "pl-[102px] pr-12 pt-0 pb-8 bg-transparent -mt-28 sm:-mt-36 md:-mt-44 lg:-mt-56 xl:-mt-64" 
+        : "pl-[102px] pr-12 py-8 bg-black"}>
         {meta.cast && meta.cast.length > 0 && (
           <CastCarousel 
             cast={meta.cast.map((actor, index) => ({
