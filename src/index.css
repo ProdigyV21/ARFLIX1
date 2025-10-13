@@ -79,6 +79,374 @@ video * {
   text-align: center !important;
 }
 
+/* Player subtitle overlay - safe-area positioning */
+.player .subs {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: max(8vh, 64px);
+  width: min(90%, 1200px);
+  text-align: center;
+  line-height: 1.25;
+  letter-spacing: 0.01em;
+  text-shadow: 0 0 1px rgba(0,0,0,0.7), 0 0 4px rgba(0,0,0,0.7);
+  pointer-events: none;
+  z-index: 1000;
+  font-family: 'Inter Tight', Arial, sans-serif;
+  font-weight: 700;
+  color: white;
+  font-size: clamp(16px, 2.5vw, 24px);
+}
+
+.player .subs .line {
+  margin: 0.15em 0;
+}
+
+/* Player container styles */
+.player-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  overflow: hidden;
+}
+
+.player-video-container {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+
+.player-video-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  color: white;
+  font-size: 18px;
+}
+
+/* Player controls */
+.player-controls {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(transparent, rgba(0,0,0,0.8));
+  padding: 20px;
+  z-index: 100;
+}
+
+.player-controls-top {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 20px;
+  background: linear-gradient(rgba(0,0,0,0.8), transparent);
+}
+
+.player-controls-center {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.player-controls-bottom {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.player-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: white;
+}
+
+.player-title {
+  font-weight: 600;
+  font-size: 16px;
+}
+
+.player-quality {
+  background: rgba(255,255,255,0.2);
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.player-play-button {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.9);
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.player-play-button:hover {
+  background: white;
+  transform: scale(1.1);
+}
+
+/* Progress bar */
+.player-progress {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.progress-bar {
+  flex: 1;
+  height: 4px;
+  background: rgba(255,255,255,0.3);
+  border-radius: 2px;
+  position: relative;
+  cursor: pointer;
+}
+
+.progress-fill {
+  height: 100%;
+  background: #e50914;
+  border-radius: 2px;
+  transition: width 0.1s ease;
+}
+
+.buffer-fill {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  background: rgba(255,255,255,0.5);
+  border-radius: 2px;
+  transition: width 0.1s ease;
+}
+
+.time-display {
+  color: white;
+  font-size: 14px;
+  font-family: monospace;
+  white-space: nowrap;
+}
+
+/* Volume controls */
+.player-controls-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.volume-button {
+  background: none;
+  border: none;
+  color: white;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.volume-button:hover {
+  background: rgba(255,255,255,0.1);
+}
+
+.volume-slider {
+  width: 80px;
+  height: 4px;
+  background: rgba(255,255,255,0.3);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+.volume-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: white;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.volume-slider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: white;
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+}
+
+/* Track selectors */
+.quality-selector,
+.audio-track-selector,
+.text-track-selector {
+  position: absolute;
+  bottom: 80px;
+  right: 20px;
+  z-index: 200;
+}
+
+.quality-selector select,
+.audio-track-selector select,
+.text-track-selector select {
+  background: rgba(0,0,0,0.8);
+  color: white;
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 4px;
+  padding: 8px 12px;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.quality-selector select:focus,
+.audio-track-selector select:focus,
+.text-track-selector select:focus {
+  outline: none;
+  border-color: #e50914;
+}
+
+/* Loading and error states */
+.player-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  color: white;
+}
+
+.loading-spinner {
+  text-align: center;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255,255,255,0.3);
+  border-top: 4px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: 0 auto 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.player-error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  background: #000;
+  color: white;
+}
+
+.error-message {
+  text-align: center;
+  max-width: 400px;
+  padding: 20px;
+}
+
+.error-message h3 {
+  color: #e50914;
+  margin-bottom: 10px;
+}
+
+.error-message button {
+  background: #e50914;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-top: 15px;
+  transition: background 0.2s ease;
+}
+
+.error-message button:hover {
+  background: #b8070f;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .player .subs {
+    font-size: clamp(14px, 4vw, 20px);
+    bottom: max(10vh, 80px);
+    width: 95%;
+  }
+  
+  .player-controls {
+    padding: 15px;
+  }
+  
+  .player-controls-top {
+    padding: 15px;
+  }
+  
+  .player-play-button {
+    width: 50px;
+    height: 50px;
+    font-size: 20px;
+  }
+  
+  .time-display {
+    font-size: 12px;
+  }
+  
+  .volume-slider {
+    width: 60px;
+  }
+  
+  .quality-selector,
+  .audio-track-selector,
+  .text-track-selector {
+    bottom: 70px;
+    right: 15px;
+  }
+}
+
+@media (max-width: 480px) {
+  .player .subs {
+    font-size: clamp(12px, 5vw, 18px);
+    bottom: max(12vh, 100px);
+  }
+  
+  .player-controls {
+    padding: 10px;
+  }
+  
+  .player-controls-top {
+    padding: 10px;
+  }
+  
+  .player-controls-bottom {
+    gap: 10px;
+  }
+  
+  .player-play-button {
+    width: 45px;
+    height: 45px;
+    font-size: 18px;
+  }
+}
+
 @media (max-width: 768px) {
   video::cue {
     font-size: var(--subs-font-size-mobile) !important;
