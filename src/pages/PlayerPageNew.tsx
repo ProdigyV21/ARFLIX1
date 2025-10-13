@@ -122,7 +122,7 @@ export function PlayerPageNew({
       try {
         console.log('[PlayerPage] Loading streams with:', { contentId, contentType, seasonNumber, episodeNumber });
         
-        const response = await fetchStreams(contentId, contentType, seasonNumber, episodeNumber);
+        const response = await fetchStreams(contentType, contentId, seasonNumber, episodeNumber);
         console.log('[PlayerPage] Streams response:', response);
         
         if (response.items && response.items.length > 0) {
