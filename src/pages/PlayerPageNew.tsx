@@ -455,13 +455,18 @@ export function PlayerPageNew({
 
   // Save progress
   useEffect(() => {
-    if (!contentId || duration <= 0) return;
+    if (!contentId || duration <= 0 || currentTime <= 0) return;
 
     const saveProgressInterval = () => {
       const progress: WatchProgress = {
         id: contentId,
-        progress: currentTime / duration,
-        timestamp: Date.now(),
+        type: contentType,
+        title,
+        poster,
+        backdrop,
+        currentTime,
+        duration,
+        updatedAt: Date.now(),
         seasonNumber,
         episodeNumber
       };
@@ -475,7 +480,7 @@ export function PlayerPageNew({
         clearInterval(progressIntervalRef.current);
       }
     };
-  }, [contentId, currentTime, duration, seasonNumber, episodeNumber]);
+  }, [contentId, contentType, title, poster, backdrop, currentTime, duration, seasonNumber, episodeNumber]);
 
   // Player control methods
   const handlePlay = useCallback(async () => {
