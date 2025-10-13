@@ -5,8 +5,8 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { ArrowLeft } from 'lucide-react';
-import { PlayerCore, createPlayer, detectPlatform } from '../player/core/PlayerCore';
-import { PlayerEvents, PlayerConfig, Source, Quality, AudioTrack, TextTrack } from '../player/core/types';
+import { useMediaEngine, getAvailableQualities, setQuality, getCurrentQuality, getAudioTracks, setAudioTrack } from '../lib/useMediaEngine';
+import type { NormalizedStream } from '../lib/player';
 import { PlayerControls } from '../components/player/PlayerControls';
 import { SettingsPanel } from '../components/player/SettingsPanel';
 import PlayerLoadingScreen from '../components/player/PlayerLoadingScreen';
@@ -40,14 +40,15 @@ export function PlayerPageNew({
   episodeNumber,
   onBack,
 }: PlayerPageProps) {
-  const playerRef = useRef<PlayerCore | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const { engineRef, attach, destroy } = useMediaEngine();
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const hideControlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const [streams, setStreams] = useState<any[]>([]);
+  const [streams, setStreams] = useState<NormalizedStream[]>([]);
   const [classifiedStreams, setClassifiedStreams] = useState<StreamWithClassification[]>([]);
-  const [currentStream, setCurrentStream] = useState<any | null>(null);
+  const [currentStream, setCurrentStream] = useState<NormalizedStream | null>(null);
   const [showIncompatibleSheet, setShowIncompatibleSheet] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -59,107 +60,60 @@ export function PlayerPageNew({
   const [volume, setVolume] = useState(1.0);
   const [muted, setMuted] = useState(false);
   const [buffered, setBuffered] = useState(0);
-  const [qualities, setQualities] = useState<Quality[]>([]);
-  const [audioTracks, setAudioTracks] = useState<AudioTrack[]>([]);
-  const [textTracks, setTextTracks] = useState<TextTrack[]>([]);
-  const [currentQuality, setCurrentQuality] = useState<Quality | undefined>();
-  const [currentAudioTrack, setCurrentAudioTrack] = useState<AudioTrack | undefined>();
-  const [currentTextTrack, setCurrentTextTrack] = useState<TextTrack | undefined>();
+  const [qualities, setQualities] = useState<any[]>([]);
+  const [audioTracks, setAudioTracks] = useState<any[]>([]);
+  const [textTracks, setTextTracks] = useState<any[]>([]);
+  const [currentQuality, setCurrentQuality] = useState<any | undefined>();
+  const [currentAudioTrack, setCurrentAudioTrack] = useState<any | undefined>();
+  const [currentTextTrack, setCurrentTextTrack] = useState<any | undefined>();
   const [subtitles, setSubtitles] = useState<Subtitle[]>([]);
   const [preferredSubtitleLang, setPreferredSubtitleLang] = useState<string>('en');
   const [sourceDetails, setSourceDetails] = useState<string>('');
   const [resumeTime, setResumeTime] = useState<number | null>(null);
   const [showResumePrompt, setShowResumePrompt] = useState(false);
 
-  // Initialize player
+  // Initialize video element
   useEffect(() => {
-    const initializePlayer = async () => {
-      try {
-        const platform = detectPlatform();
-        const config: PlayerConfig = {
-          preferHighestOnStart: true,
-          autoPlay: false,
-          volume: 1.0,
-          muted: false,
-          preferredAudioLang: 'en',
-          preferredTextLang: preferredSubtitleLang,
-          enableABR: true
-        };
+    if (videoRef.current && engineRef.current) {
+      attach(videoRef.current);
+    }
+  }, [attach]);
 
-        const player = createPlayer(platform, config);
-        playerRef.current = player;
+  // Video event handlers
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
 
-        // Set up event listeners
-        const unsubscribe = player.on((event: PlayerEvents) => {
-          handlePlayerEvent(event);
-        });
-
-        return unsubscribe;
-      } catch (err) {
-        console.error('Failed to initialize player:', err);
-        setError(err instanceof Error ? err.message : 'Failed to initialize player');
+    const handleTimeUpdate = () => setCurrentTime(video.currentTime);
+    const handleDurationChange = () => setDuration(video.duration);
+    const handlePlay = () => setIsPlaying(true);
+    const handlePause = () => setIsPlaying(false);
+    const handleVolumeChange = () => {
+      setVolume(video.volume);
+      setMuted(video.muted);
+    };
+    const handleProgress = () => {
+      if (video.buffered.length > 0) {
+        const buffered = video.buffered.end(video.buffered.length - 1);
+        setBuffered((buffered / video.duration) * 100);
       }
     };
 
-    const unsubscribe = initializePlayer();
+    video.addEventListener('timeupdate', handleTimeUpdate);
+    video.addEventListener('durationchange', handleDurationChange);
+    video.addEventListener('play', handlePlay);
+    video.addEventListener('pause', handlePause);
+    video.addEventListener('volumechange', handleVolumeChange);
+    video.addEventListener('progress', handleProgress);
 
     return () => {
-      unsubscribe.then(unsub => unsub?.());
-      if (playerRef.current) {
-        playerRef.current.destroy();
-      }
+      video.removeEventListener('timeupdate', handleTimeUpdate);
+      video.removeEventListener('durationchange', handleDurationChange);
+      video.removeEventListener('play', handlePlay);
+      video.removeEventListener('pause', handlePause);
+      video.removeEventListener('volumechange', handleVolumeChange);
+      video.removeEventListener('progress', handleProgress);
     };
-  }, []);
-
-  const handlePlayerEvent = useCallback((event: PlayerEvents) => {
-    switch (event.type) {
-      case 'ready':
-        console.log('Player ready');
-        break;
-      
-      case 'error':
-        console.error('Player error:', event.error);
-        setError(event.error?.message || 'Unknown error');
-        break;
-      
-      case 'time':
-        setCurrentTime(event.current);
-        setDuration(event.duration);
-        break;
-      
-      case 'buffer':
-        setBuffered(event.percent);
-        break;
-      
-      case 'stateChanged':
-        setIsPlaying(event.state.playing);
-        setVolume(event.state.volume);
-        setMuted(event.state.muted);
-        break;
-      
-      case 'tracks':
-        setAudioTracks(event.audio);
-        setTextTracks(event.text);
-        setQualities(event.qualities);
-        console.log('Tracks loaded:', { audio: event.audio.length, text: event.text.length, qualities: event.qualities.length });
-        break;
-      
-      case 'qualityChanged':
-        setCurrentQuality(event.quality);
-        break;
-      
-      case 'audioChanged':
-        setCurrentAudioTrack(event.audio);
-        break;
-      
-      case 'textChanged':
-        setCurrentTextTrack(event.text);
-        break;
-      
-      case 'ended':
-        setIsPlaying(false);
-        break;
-    }
   }, []);
 
   // Load streams
@@ -197,17 +151,10 @@ export function PlayerPageNew({
             setCurrentStream(playableSource);
             setSourceDetails(playableSource.title || playableSource.name || 'Unknown Source');
             
-            // Load the source into the player
-            const source: Source = {
-              url: playableSource.url,
-              type: playableSource.type as any,
-              provider: playableSource.provider,
-              sizeBytes: playableSource.size,
-              codec: playableSource.codec,
-              resolution: playableSource.quality
-            };
-            
-            await playerRef.current?.load(source);
+            // Load the source using existing media engine
+            if (engineRef.current) {
+              await engineRef.current.load(playableSource.url);
+            }
           } else {
             setShowIncompatibleSheet(true);
           }
@@ -339,7 +286,9 @@ export function PlayerPageNew({
   // Player control methods
   const handlePlay = useCallback(async () => {
     try {
-      await playerRef.current?.play();
+      if (videoRef.current) {
+        await videoRef.current.play();
+      }
     } catch (err) {
       console.error('Failed to play:', err);
     }
@@ -347,7 +296,9 @@ export function PlayerPageNew({
 
   const handlePause = useCallback(async () => {
     try {
-      await playerRef.current?.pause();
+      if (videoRef.current) {
+        videoRef.current.pause();
+      }
     } catch (err) {
       console.error('Failed to pause:', err);
     }
@@ -355,7 +306,9 @@ export function PlayerPageNew({
 
   const handleSeek = useCallback(async (seconds: number) => {
     try {
-      await playerRef.current?.seek(seconds);
+      if (videoRef.current) {
+        videoRef.current.currentTime = seconds;
+      }
     } catch (err) {
       console.error('Failed to seek:', err);
     }
@@ -363,7 +316,9 @@ export function PlayerPageNew({
 
   const handleVolumeChange = useCallback(async (vol: number) => {
     try {
-      await playerRef.current?.setVolume(vol);
+      if (videoRef.current) {
+        videoRef.current.volume = vol;
+      }
     } catch (err) {
       console.error('Failed to set volume:', err);
     }
@@ -371,15 +326,19 @@ export function PlayerPageNew({
 
   const handleMuteToggle = useCallback(async () => {
     try {
-      await playerRef.current?.setMuted(!muted);
+      if (videoRef.current) {
+        videoRef.current.muted = !muted;
+      }
     } catch (err) {
       console.error('Failed to toggle mute:', err);
     }
   }, [muted]);
 
-  const handleQualityChange = useCallback(async (quality: Quality) => {
+  const handleQualityChange = useCallback(async (quality: any) => {
     try {
-      await playerRef.current?.setQuality(quality);
+      if (engineRef.current) {
+        await setQuality(engineRef.current, quality);
+      }
     } catch (err) {
       console.error('Failed to set quality:', err);
     }
@@ -387,7 +346,9 @@ export function PlayerPageNew({
 
   const handleAudioTrackChange = useCallback(async (trackId: string) => {
     try {
-      await playerRef.current?.setAudio(trackId);
+      if (engineRef.current) {
+        await setAudioTrack(engineRef.current, trackId);
+      }
     } catch (err) {
       console.error('Failed to set audio track:', err);
     }
@@ -395,7 +356,8 @@ export function PlayerPageNew({
 
   const handleTextTrackChange = useCallback(async (trackId?: string) => {
     try {
-      await playerRef.current?.setText(trackId);
+      // Handle text track changes
+      console.log('Text track change:', trackId);
     } catch (err) {
       console.error('Failed to set text track:', err);
     }
@@ -403,7 +365,8 @@ export function PlayerPageNew({
 
   const handleAttachSubtitle = useCallback(async (url: string, format: 'vtt'|'ass'|'srt', lang?: string, label?: string) => {
     try {
-      await playerRef.current?.attachExternalSubtitle(url, format, lang, label);
+      // Handle external subtitle attachment
+      console.log('Attach subtitle:', url, format, lang, label);
     } catch (err) {
       console.error('Failed to attach subtitle:', err);
     }
@@ -460,15 +423,15 @@ export function PlayerPageNew({
     >
       {/* Video container */}
       <div className="absolute inset-0">
-        {/* Video element will be injected by the platform-specific player */}
-        <div className="w-full h-full bg-black flex items-center justify-center">
-          <div className="text-white text-center">
-            <p>Video player initialized</p>
-            <p className="text-sm text-gray-400 mt-2">
-              Platform: {detectPlatform()}
-            </p>
-          </div>
-        </div>
+        <video
+          ref={videoRef}
+          className="w-full h-full object-cover"
+          poster={poster}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={handleMouseLeave}
+          onClick={handleVideoClick}
+          crossOrigin="anonymous"
+        />
       </div>
 
       {/* Resume prompt */}
