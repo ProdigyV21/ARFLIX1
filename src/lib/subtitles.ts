@@ -41,15 +41,20 @@ export async function fetchSubtitles(
     if (season !== undefined) params.set('season', season.toString());
     if (episode !== undefined) params.set('episode', episode.toString());
 
-    const url = `${supabaseUrl}/functions/v1/catalog-subtitles?${params}`;
-    console.log('[fetchSubtitles] Fetching from backend:', url);
+          const url = `${supabaseUrl}/functions/v1/catalog-subtitles?${params}`;
+          console.log('[fetchSubtitles] Fetching from backend:', url);
 
-    // Don't send auth headers for public subtitle endpoint
-    const response = await fetch(url, {
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
+          // Get auth session for backend request
+          const { data: { session } } = await supabase.auth.getSession();
+          const headers: Record<string, string> = {
+            'Content-Type': 'application/json'
+          };
+          
+          if (session?.access_token) {
+            headers['Authorization'] = `Bearer ${session.access_token}`;
+          }
+
+          const response = await fetch(url, { headers });
 
     if (!response.ok) {
       console.warn('[fetchSubtitles] Backend response not OK:', response.status);

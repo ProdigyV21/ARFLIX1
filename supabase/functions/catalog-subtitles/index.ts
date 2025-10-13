@@ -1,4 +1,5 @@
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
+import { createClient } from "npm:@supabase/supabase-js@2.57.4";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -23,6 +24,7 @@ Deno.serve(async (req: Request) => {
   try {
     const url = new URL(req.url);
     const id = url.searchParams.get("id");
+    const type = url.searchParams.get("type") || "movie";
     const season = url.searchParams.get("season");
     const episode = url.searchParams.get("episode");
 
@@ -33,55 +35,103 @@ Deno.serve(async (req: Request) => {
       );
     }
 
+    // Initialize Supabase client with auth from request
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+      { global: { headers: { Authorization: req.headers.get("Authorization")! } } }
+    );
+
+    // Get user's enabled addons
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
+      console.log('[subtitles] No authenticated user, returning empty subtitles');
+      return new Response(
+        JSON.stringify({ subtitles: [] }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const { data: addons } = await supabase
+      .from("addons")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("enabled", true);
+
+    if (!addons || addons.length === 0) {
+      console.log('[subtitles] No enabled addons found');
+      return new Response(
+        JSON.stringify({ subtitles: [] }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Extract IMDb ID (with tt prefix)
     let imdbId = id.startsWith('tt') ? id : `tt${id}`;
+    
+    // Build the video ID for Stremio addons
+    let videoId = imdbId;
+    if (type === 'series' && season && episode) {
+      videoId = `${imdbId}:${season}:${episode}`;
+    }
+
     const subtitles: Subtitle[] = [];
 
-    try {
-      // Use direct download URLs from OpenSubtitles REST API (older but works without auth)
-      // These URLs are accessible from edge functions
-      const imdbNumeric = imdbId.replace('tt', '');
-      const osUrl = (season && episode)
-        ? `https://dl.opensubtitles.org/en/download/sublanguageid-eng/subformat-srt/imdbid-${imdbNumeric}/season-${season}/episode-${episode}`
-        : `https://dl.opensubtitles.org/en/download/sublanguageid-eng/subformat-srt/imdbid-${imdbNumeric}`;
-
-      console.log('[subtitles] Trying OpenSubtitles download URL:', osUrl);
-
-      const osResponse = await fetch(osUrl, {
-        method: 'GET',
-        headers: {
-          'User-Agent': 'ArFlix v1.0'
-        },
-        redirect: 'follow'
-      });
-
-      console.log('[subtitles] Response status:', osResponse.status, 'Content-Type:', osResponse.headers.get('content-type'));
-
-      // If the direct download approach doesn't work, try the search API
-      if (!osResponse.ok || osResponse.status === 404) {
-        console.log('[subtitles] Direct download failed, trying search API');
+    // Query each addon's subtitles endpoint
+    for (const addon of addons) {
+      try {
+        const manifestUrl = addon.manifest_url;
         
-        // Try alternative: Use a CORS proxy or return empty for now
-        // The REST API at rest.opensubtitles.org has DNS issues from edge functions
-        throw new Error('OpenSubtitles REST API not accessible from edge function');
-      }
+        // Fetch manifest to check if addon provides subtitles
+        const manifestRes = await fetch(manifestUrl);
+        if (!manifestRes.ok) continue;
+        
+        const manifest = await manifestRes.json();
+        
+        // Check if addon provides subtitles resource
+        if (!manifest.resources || !manifest.resources.includes('subtitles')) {
+          console.log(`[subtitles] Addon ${addon.id} does not provide subtitles`);
+          continue;
+        }
 
-      // Process the response if we got subtitle data
-      const contentType = osResponse.headers.get('content-type') || '';
-      if (contentType.includes('application/x-gzip') || contentType.includes('application/gzip')) {
-        console.log('[subtitles] Got gzipped subtitle, adding to results');
-        subtitles.push({
-          id: '1',
-          language: 'English',
-          languageCode: 'en',
-          url: osUrl,
-          label: 'English (srt)',
-          format: 'srt'
+        // Build subtitles URL
+        const subtitlesUrl = manifestUrl.replace("/manifest.json", "") + `/subtitles/${type}/${videoId}.json`;
+        console.log(`[subtitles] Fetching from addon: ${subtitlesUrl}`);
+
+        const subtitlesRes = await fetch(subtitlesUrl, {
+          headers: {
+            'User-Agent': 'ArFlix v1.0'
+          }
         });
+
+        if (!subtitlesRes.ok) {
+          console.log(`[subtitles] Addon returned ${subtitlesRes.status}`);
+          continue;
+        }
+
+        const subtitlesData = await subtitlesRes.json();
+        
+        if (subtitlesData.subtitles && Array.isArray(subtitlesData.subtitles)) {
+          console.log(`[subtitles] Found ${subtitlesData.subtitles.length} subtitles from addon ${addon.id}`);
+          
+          // Add subtitles to results
+          for (const sub of subtitlesData.subtitles) {
+            subtitles.push({
+              id: sub.id || `${addon.id}-${subtitles.length}`,
+              language: sub.lang || 'Unknown',
+              languageCode: sub.lang || 'unknown',
+              url: sub.url,
+              label: `${sub.lang || 'Unknown'} (${addon.name || 'Unknown'})`,
+              format: 'srt' // Most Stremio addons provide SRT
+            });
+          }
+        }
+      } catch (addonError: any) {
+        console.error(`[subtitles] Error fetching from addon ${addon.id}:`, addonError.message);
       }
-    } catch (osError: any) {
-      console.error('[subtitles] Error:', osError.message);
     }
+
+    console.log(`[subtitles] Returning ${subtitles.length} total subtitles`);
 
     return new Response(
       JSON.stringify({ subtitles }),
