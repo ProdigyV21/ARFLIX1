@@ -7,7 +7,7 @@ import { SettingsPanel } from '../components/player/SettingsPanel';
 import PlayerLoadingScreen from '../components/player/PlayerLoadingScreen';
 import { saveProgress, getProgress, shouldShowResumePrompt, WatchProgress } from '../lib/progress';
 import { fetchStreams } from '../lib/api';
-import { type Subtitle } from '../lib/subtitles';
+import { type Subtitle, fetchSubtitlesWithCache } from '../lib/subtitles';
 import { supabase } from '../lib/supabase';
 import { getDeviceCapabilities } from '../lib/deviceCapabilities';
 import { selectPlayableSource, type StreamWithClassification } from '../lib/streamClassifier';
@@ -136,6 +136,13 @@ export function PlayerPage({
         }));
         setAvailableSubtitles(streamSubs);
         console.log('[PlayerPage] Loaded stream subtitles:', streamSubs);
+        return;
+      }
+
+      // Fallback: Use cached OpenSubtitles first
+      const cached = await fetchSubtitlesWithCache(contentId, seasonNumber, episodeNumber);
+      if (cached.length > 0) {
+        setAvailableSubtitles(cached);
         return;
       }
 

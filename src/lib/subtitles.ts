@@ -66,11 +66,34 @@ export async function fetchSubtitles(
       }
     }
 
+    // Cache results in-memory for 1h to avoid repeated fetches
+    try {
+      const key = `subs:${contentId}:${season || ''}:${episode || ''}`;
+      const payload = { ts: Date.now(), items: subtitles };
+      localStorage.setItem(key, JSON.stringify(payload));
+    } catch {}
+
     return subtitles;
   } catch (error: any) {
     console.error('[fetchSubtitles] Error fetching subtitles:', error);
     return [];
   }
+}
+
+export async function fetchSubtitlesWithCache(
+  contentId: string,
+  season?: number,
+  episode?: number
+): Promise<Subtitle[]> {
+  const key = `subs:${contentId}:${season || ''}:${episode || ''}`;
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      const { ts, items } = JSON.parse(raw);
+      if (Date.now() - ts < 3600_000 && Array.isArray(items)) return items;
+    }
+  } catch {}
+  return fetchSubtitles(contentId, season, episode);
 }
 
 function getLangCode(osLang: string): string {
