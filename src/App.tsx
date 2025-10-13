@@ -6,6 +6,7 @@ import { HomePage } from './pages/HomePage';
 import { DetailsPage } from './pages/DetailsPage';
 import { PlayerPage } from './pages/PlayerPage';
 import { PlayerPageNew } from './pages/PlayerPageNew';
+import { PlayerTestPage } from './pages/PlayerTestPage';
 import { AddonsPage } from './pages/AddonsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { SearchPage } from './pages/SearchPage';
@@ -87,6 +88,9 @@ function App() {
 
       case 'settings':
         return <SettingsPage />;
+
+      case 'player-test':
+        return <PlayerTestPage onBack={goBack} />;
 
       case 'details':
         return (
