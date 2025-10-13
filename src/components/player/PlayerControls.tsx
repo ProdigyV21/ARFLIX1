@@ -11,6 +11,7 @@ type PlayerControlsProps = {
   volume: number;
   isMuted: boolean;
   currentQualityLabel?: string;
+  sourceDetails?: string;
   title: string;
   subtitle?: string;
   visible: boolean;
@@ -34,6 +35,7 @@ export function PlayerControls({
   volume,
   isMuted,
   currentQualityLabel,
+  sourceDetails,
   title,
   subtitle,
   visible,
@@ -82,6 +84,7 @@ export function PlayerControls({
         <div>
           <h1 className="text-2xl font-bold mb-1">{title}</h1>
           {subtitle && <p className="text-sm text-gray-300">{subtitle}</p>}
+          {sourceDetails && <p className="text-xs text-gray-400 mt-1">{sourceDetails}</p>}
         </div>
         {currentQualityLabel && (
           <div className="bg-black/60 px-3 py-1 rounded text-sm font-medium">

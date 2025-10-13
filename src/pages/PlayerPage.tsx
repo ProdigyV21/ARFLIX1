@@ -1114,6 +1114,7 @@ export function PlayerPage({
             volume={volume}
             isMuted={isMuted}
             currentQualityLabel={currentStream.label}
+            sourceDetails={currentStream.title || currentStream.name}
             title={title}
             subtitle={subtitle}
             visible={controlsVisible && !settingsVisible}
