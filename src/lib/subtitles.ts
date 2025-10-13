@@ -1,3 +1,5 @@
+import { supabase } from './supabase';
+
 export interface Subtitle {
   id: string;
   language: string;
