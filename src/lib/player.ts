@@ -58,6 +58,20 @@ export function createPlayer(
       hls.loadSource(stream.url);
       hls.attachMedia(videoElement);
 
+      const selectHighestHls = () => {
+        if (!hls.levels || hls.levels.length === 0) return;
+        const bestIndex = hls.levels
+          .map((l, i) => ({ h: l.height || 0, i }))
+          .sort((a, b) => b.h - a.h)[0]?.i;
+        if (bestIndex !== undefined) {
+          hls.currentLevel = bestIndex;
+        }
+      };
+
+      hls.on(Hls.Events.MANIFEST_PARSED, () => {
+        selectHighestHls();
+      });
+
       hls.on(Hls.Events.ERROR, (_event, data) => {
         if (data.fatal) {
           onError?.(new Error(`HLS Error: ${data.type} - ${data.details}`));
@@ -77,6 +91,18 @@ export function createPlayer(
   if (stream.kind === 'dash') {
     const player = dashjs.MediaPlayer().create();
     player.initialize(videoElement, stream.url, true);
+    player.updateSettings({ streaming: { abr: { autoSwitchBitrate: { video: false } } } });
+
+    const selectHighestDash = () => {
+      const tracks = player.getBitrateInfoListFor('video');
+      if (!tracks || tracks.length === 0) return;
+      const best = tracks.sort((a: any, b: any) => (b.height || 0) - (a.height || 0))[0];
+      if (best && typeof best.qualityIndex === 'number') {
+        player.setQualityFor('video', best.qualityIndex);
+      }
+    };
+
+    player.on(dashjs.MediaPlayer.events.STREAM_INITIALIZED, selectHighestDash);
 
     player.on(dashjs.MediaPlayer.events.ERROR, (e: any) => {
       onError?.(new Error(`DASH Error: ${e.error}`));
