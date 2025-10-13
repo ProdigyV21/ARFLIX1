@@ -43,6 +43,34 @@ function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Handle hash routing
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash.substring(1);
+      if (hash.startsWith('player?')) {
+        const dataParam = hash.split('?data=')[1];
+        if (dataParam) {
+          try {
+            const data = JSON.parse(decodeURIComponent(dataParam));
+            navigate('player', data);
+          } catch (e) {
+            console.error('Failed to parse player data from hash:', e);
+          }
+        }
+      }
+    };
+
+    // Handle initial hash
+    handleHashChange();
+
+    // Listen for hash changes
+    window.addEventListener('hashchange', handleHashChange);
+
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange);
+    };
+  }, []);
+
   async function loadAddons() {
     try {
       const { addons: data } = await addonAPI.list();
