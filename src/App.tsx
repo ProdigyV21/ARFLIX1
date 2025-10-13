@@ -7,6 +7,7 @@ import { DetailsPage } from './pages/DetailsPage';
 import { PlayerPage } from './pages/PlayerPage';
 import { PlayerPageNew } from './pages/PlayerPageNew';
 import { PlayerTestPage } from './pages/PlayerTestPage';
+import { SimplePlayerTest } from './pages/SimplePlayerTest';
 import { AddonsPage } from './pages/AddonsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { SearchPage } from './pages/SearchPage';
@@ -91,6 +92,9 @@ function App() {
 
       case 'player-test':
         return <PlayerTestPage onBack={goBack} />;
+
+      case 'simple-player-test':
+        return <SimplePlayerTest />;
 
       case 'details':
         return (
