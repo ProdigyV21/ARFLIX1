@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { AlertCircle, ArrowLeft } from 'lucide-react';
-import { useMediaEngine, getAvailableQualities, setQuality, getCurrentQuality, /* getAudioTracks, setAudioTrack, type AttachResult */ } from '../lib/useMediaEngine';
+import { useMediaEngine, getAvailableQualities, setQuality, getCurrentQuality, getAudioTracks, setAudioTrack } from '../lib/useMediaEngine';
 import type { NormalizedStream } from '../lib/player';
 import { PlayerControls } from '../components/player/PlayerControls';
 import { SettingsPanel } from '../components/player/SettingsPanel';
@@ -72,6 +72,8 @@ export function PlayerPage({
   const [currentSubtitle, setCurrentSubtitle] = useState<string | undefined>(); // Store subtitle ID, not language
   const [availableSubtitles, setAvailableSubtitles] = useState<Subtitle[]>([]);
   const [preferredSubtitleLang, setPreferredSubtitleLang] = useState<string>('en');
+  const [availableAudioTracks, setAvailableAudioTracks] = useState<Array<{ id: number; label: string; language: string }>>([]);
+  const [currentAudioTrack, setCurrentAudioTrack] = useState<number | undefined>();
 
   const subtitle = seasonNumber && episodeNumber
     ? `S${seasonNumber} E${episodeNumber}`
@@ -84,6 +86,10 @@ export function PlayerPage({
   useEffect(() => {
     if (currentStream) {
       loadSubtitles();
+      if (engineRef.current) {
+        const tracks = getAudioTracks(engineRef.current);
+        setAvailableAudioTracks(tracks);
+      }
     }
   }, [currentStream, contentId, seasonNumber, episodeNumber]);
 
@@ -434,7 +440,18 @@ export function PlayerPage({
         return;
       }
 
-      setStreams(response.items);
+      // Enrich streams with additional info if available
+      const enriched = response.items.map((s: any) => ({
+        ...s,
+        provider: s.provider || s.sourceName || s.host,
+        qualityLabel: s.qualityLabel || (s.quality ? `${s.quality}p` : undefined),
+        filesizeBytes: s.filesizeBytes || s.fileSizeBytes || s.sizeBytes,
+        seeds: s.seeds ?? s.seeders,
+        peers: s.peers,
+        sourceType: s.sourceType || (s.infoHash ? 'torrent' : (s.url?.startsWith('http') ? 'http' : 'unknown')),
+      }));
+
+      setStreams(enriched);
 
       console.log('[PlayerPage] Streams loaded:', response);
 
@@ -451,7 +468,7 @@ export function PlayerPage({
         caps
       );
 
-      const classified = response.items.map((s: any) => ({
+      const classified = enriched.map((s: any) => ({
         url: s.url,
         title: s.title,
         quality: s.quality,
@@ -960,6 +977,14 @@ export function PlayerPage({
     }
   };
 
+  // Audio track change
+  const handleAudioTrackChange = (trackId: string) => {
+    if (!engineRef.current) return;
+    const idNum = parseInt(trackId, 10);
+    setAudioTrack(engineRef.current, idNum);
+    setCurrentAudioTrack(idNum);
+  };
+
   if (loading) {
     return (
       <div className="h-screen bg-black flex items-center justify-center">
@@ -1087,11 +1112,14 @@ export function PlayerPage({
             subtitlesEnabled={subtitlesEnabled}
             currentSubtitle={currentSubtitle}
             availableSubtitles={availableSubtitles}
+            availableAudioTracks={availableAudioTracks.map(t => ({ id: String(t.id), language: t.language, label: t.label }))}
+            currentAudioTrack={currentAudioTrack !== undefined ? String(currentAudioTrack) : undefined}
             onClose={() => setSettingsVisible(false)}
             onQualityChange={handleQualityChange}
             onStreamChange={handleStreamChange}
             onSpeedChange={handleSpeedChange}
             onSubtitleChange={handleSubtitleChange}
+            onAudioTrackChange={handleAudioTrackChange}
           />
         </>
       )}

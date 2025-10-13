@@ -25,6 +25,21 @@
   --subs-bottom-margin: 4rem;
 }
 
+/* Player subtitle overlay for safe-area positioning */
+.player-subtitles {
+  position: absolute;
+  left: 50%;
+  bottom: max(8vh, 64px);
+  transform: translateX(-50%);
+  width: min(90%, 1200px);
+  text-align: center;
+  line-height: 1.25;
+  letter-spacing: 0.01em;
+  text-shadow: 0 0 1px rgba(0,0,0,0.7), 0 0 4px rgba(0,0,0,0.7);
+  pointer-events: none;
+}
+.player-subtitles .line { margin: 0.15em 0; }
+
 @layer base {
   * {
     @apply border-border;

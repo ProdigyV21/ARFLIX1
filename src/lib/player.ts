@@ -17,6 +17,15 @@ export type NormalizedStream = {
   sourceName?: string;
   infoHash?: string;
   fileIdx?: number;
+  // Enrichment for source details (optional)
+  provider?: string;
+  qualityLabel?: string; // e.g., 2160p, 1080p
+  filesizeBytes?: number;
+  seeds?: number;
+  peers?: number;
+  sourceType?: 'torrent' | 'http' | 'debrid' | 'cdn' | string;
+  audioLangs?: string[];
+  subtitleLangs?: string[];
 };
 
 export type StreamsResponse = {

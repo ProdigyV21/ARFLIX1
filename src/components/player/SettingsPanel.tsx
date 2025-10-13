@@ -66,6 +66,14 @@ export function SettingsPanel({
 
   const subtitleOptions = availableSubtitles.length > 0 ? availableSubtitles : (currentStream.captions || []);
 
+  function formatSize(bytes?: number) {
+    if (!bytes || bytes <= 0) return undefined as any;
+    const units = ['B','KB','MB','GB','TB'];
+    let i = 0; let n = bytes;
+    while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+    return `${n.toFixed(n >= 100 ? 0 : n >= 10 ? 1 : 2)} ${units[i]}`;
+  }
+
   return (
     <div className="absolute inset-0 bg-black/80 flex items-center justify-end">
       <div className="w-full max-w-md h-full bg-neutral-900 shadow-2xl flex flex-col">
@@ -157,38 +165,44 @@ export function SettingsPanel({
                           stream.url === currentStream.url ? 'bg-white/10' : ''
                         }`}
                       >
-                        <div className="flex-1 min-w-0">
-                          <div className="font-medium truncate">{stream.label}</div>
+                          <div className="flex-1 min-w-0">
+                            <div className="font-medium truncate">{stream.label}</div>
 
-                          <div className="flex flex-wrap gap-1.5 mt-2">
-                            {stream.quality && (
-                              <span className="text-xs px-2 py-0.5 rounded bg-neutral-700 text-gray-300">
-                                {stream.quality}p
-                              </span>
-                            )}
-                            {stream.codec && (
-                              <span className="text-xs px-2 py-0.5 rounded bg-neutral-700 text-gray-300">
-                                {stream.codec.toUpperCase()}
-                              </span>
-                            )}
-                            {(stream as any).audioCodec && (
-                              <span className="text-xs px-2 py-0.5 rounded bg-neutral-700 text-gray-300">
-                                {(stream as any).audioCodec}
-                              </span>
-                            )}
-                            {stream.hdr && stream.hdr !== 'none' && (
-                              <span className="text-xs px-2 py-0.5 rounded bg-purple-600/20 text-purple-400">
-                                {stream.hdr === 'dolby_vision' ? 'Dolby Vision' : 'HDR10'}
-                              </span>
-                            )}
-                          </div>
+                            {/* Line 1 */}
+                            <div className="flex flex-wrap gap-1.5 mt-2">
+                              {(stream.qualityLabel || stream.quality) && (
+                                <span className="text-xs px-2 py-0.5 rounded bg-neutral-700 text-gray-300">
+                                  {stream.qualityLabel || `${stream.quality}p`}
+                                </span>
+                              )}
+                              {stream.codec && (
+                                <span className="text-xs px-2 py-0.5 rounded bg-neutral-700 text-gray-300">
+                                  {String(stream.codec).toUpperCase()}
+                                </span>
+                              )}
+                              {Boolean((stream as any).filesizeBytes) && (
+                                <span className="text-xs px-2 py-0.5 rounded bg-neutral-700 text-gray-300">
+                                  {formatSize((stream as any).filesizeBytes)}
+                                </span>
+                              )}
+                              {stream.hdr && stream.hdr !== 'none' && (
+                                <span className="text-xs px-2 py-0.5 rounded bg-purple-600/20 text-purple-400">
+                                  {stream.hdr === 'dolby_vision' ? 'Dolby Vision' : 'HDR10'}
+                                </span>
+                              )}
+                            </div>
 
-                          <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-400">
-                            {stream.sourceName && <span>{stream.sourceName}</span>}
-                            {(stream as any).fileSize && <span>{(stream as any).fileSize}</span>}
-                            {(stream as any).seeds !== undefined && <span>👤 {(stream as any).seeds}</span>}
+                            {/* Line 2 */}
+                            <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-400">
+                              {stream.provider && <span>{stream.provider}</span>}
+                              {((stream as any).seeds !== undefined || (stream as any).peers !== undefined) && (
+                                <span>
+                                  {(stream as any).seeds ?? '-'}⟂{(stream as any).peers ?? '-'}
+                                </span>
+                              )}
+                              {stream.sourceType && <span>{stream.sourceType}</span>}
+                            </div>
                           </div>
-                        </div>
                         {stream.url === currentStream.url && <Check className="w-5 h-5 flex-shrink-0" />}
                       </button>
                     ))}
