@@ -131,20 +131,16 @@ export function PlayerPageNew({
           const deviceCapabilities = getDeviceCapabilities();
           console.log('[PlayerPage] Device capabilities:', deviceCapabilities);
           
-          const classified = response.items.map(stream => ({
-            ...stream,
-            classification: {
-              playable: true,
-              quality: stream.quality || 'unknown',
-              container: stream.container || 'unknown',
-              codec: stream.codec || 'unknown',
-              size: stream.size || 0
-            }
-          }));
-          
-          setClassifiedStreams(classified);
-          
-          const playableSource = selectPlayableSource(classified);
+          // Use selectPlayableSource to classify and select the best stream
+          const playableSource = selectPlayableSource(
+            response.items.map(s => ({
+              url: s.url,
+              title: s.title || s.name || 'Unknown',
+              quality: s.quality,
+              kind: s.kind || 'unknown'
+            })),
+            deviceCapabilities
+          );
           console.log('[PlayerPage] Selected playable source:', playableSource);
           
           if (playableSource) {
