@@ -14,10 +14,29 @@ export async function fetchSubtitles(
   episode?: number
 ): Promise<Subtitle[]> {
   try {
+    // Convert TMDB ID to IMDb ID if needed
+    let imdbId = contentId;
+    if (contentId.startsWith('tmdb:')) {
+      const tmdbId = contentId.replace('tmdb:', '');
+      const { getExternalIds } = await import('./externalIds');
+      const externalIds = await getExternalIds({
+        type: contentType === 'series' ? 'series' : 'movie',
+        tmdbId: parseInt(tmdbId)
+      });
+      
+      if (externalIds.imdbId) {
+        imdbId = externalIds.imdbId;
+        console.log('[fetchSubtitles] Converted TMDB ID to IMDb ID:', imdbId);
+      } else {
+        console.warn('[fetchSubtitles] No IMDb ID found for TMDB ID:', contentId);
+        return [];
+      }
+    }
+
     // Fetch subtitles from backend (which uses Stremio addons)
     const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
     const params = new URLSearchParams();
-    params.set('id', contentId);
+    params.set('id', imdbId);
     params.set('type', contentType);
     if (season !== undefined) params.set('season', season.toString());
     if (episode !== undefined) params.set('episode', episode.toString());
@@ -25,7 +44,12 @@ export async function fetchSubtitles(
     const url = `${supabaseUrl}/functions/v1/catalog-subtitles?${params}`;
     console.log('[fetchSubtitles] Fetching from backend:', url);
 
-    const response = await fetch(url);
+    // Don't send auth headers for public subtitle endpoint
+    const response = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
 
     if (!response.ok) {
       console.warn('[fetchSubtitles] Backend response not OK:', response.status);

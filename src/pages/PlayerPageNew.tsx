@@ -348,11 +348,21 @@ export function PlayerPageNew({
         const matchingStream = response.items.find((s: any) => s.url === playableSource.url);
         if (matchingStream) {
           setCurrentStream(matchingStream);
-          setSourceDetails(matchingStream.title || matchingStream.name || 'Unknown Source');
+          
+          // Build better source details
+          const quality = matchingStream.quality || playableSource.classification?.quality || 'Unknown';
+          const container = playableSource.classification?.container?.toUpperCase() || 'Unknown';
+          const size = matchingStream.filesizeBytes 
+            ? `${(matchingStream.filesizeBytes / 1024 / 1024 / 1024).toFixed(2)} GB`
+            : '';
+          const seeds = matchingStream.seeds ? `🌱 ${matchingStream.seeds}` : '';
+          
+          const details = [quality + 'p', container, size, seeds].filter(Boolean).join(' • ');
+          setSourceDetails(details || 'Unknown Source');
         } else if (response.items.length > 0) {
           console.log('[PlayerPage] Fallback to first stream');
           setCurrentStream(response.items[0]);
-          setSourceDetails(response.items[0].title || response.items[0].name || 'Unknown Source');
+          setSourceDetails('Unknown Source');
         }
         
         setLoading(false);
