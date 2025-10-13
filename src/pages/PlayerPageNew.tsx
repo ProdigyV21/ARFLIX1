@@ -395,18 +395,25 @@ export function PlayerPageNew({
   }, []);
 
   if (loading) {
-    return <PlayerLoadingScreen title={title} poster={poster} />;
+    return (
+      <div className="h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-white">Loading streams...</p>
+        </div>
+      </div>
+    );
   }
 
-  if (error) {
+  if (error && !currentStream) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="text-center text-white">
-          <h2 className="text-2xl font-bold mb-4">Playback Error</h2>
-          <p className="mb-4">{error}</p>
+      <div className="h-screen bg-black flex items-center justify-center">
+        <div className="text-center max-w-md px-6">
+          <h2 className="text-2xl font-bold mb-2">Playback Error</h2>
+          <p className="text-gray-400 mb-6">{error}</p>
           <button
             onClick={onBack}
-            className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+            className="px-6 py-3 bg-white text-black rounded-lg font-medium hover:bg-gray-200 transition-colors"
           >
             Go Back
           </button>
@@ -416,23 +423,29 @@ export function PlayerPageNew({
   }
 
   return (
-    <div 
-      ref={containerRef}
-      className="relative w-full h-screen bg-black overflow-hidden"
-      onMouseMove={handleMouseMove}
-    >
-      {/* Video container */}
-      <div className="absolute inset-0">
-        <video
-          ref={videoRef}
-          className="w-full h-full object-cover"
-          poster={poster}
-          onMouseMove={handleMouseMove}
-          onMouseLeave={handleMouseLeave}
-          onClick={handleVideoClick}
-          crossOrigin="anonymous"
+    <div ref={containerRef} className="relative h-screen bg-black overflow-hidden">
+      <video
+        ref={videoRef}
+        className="w-full h-full object-contain"
+        playsInline
+        crossOrigin="anonymous"
+        onClick={handleVideoClick}
+      />
+
+      {/* Loading Screen */}
+      <PlayerLoadingScreen
+        poster={poster}
+        title={title}
+        isBuffering={false}
+        show={loading || (!currentStream && !error)}
+      />
+
+      {showIncompatibleSheet && (
+        <IncompatibleSourceSheet
+          onClose={() => setShowIncompatibleSheet(false)}
+          onRetry={() => window.location.reload()}
         />
-      </div>
+      )}
 
       {/* Resume prompt */}
       {showResumePrompt && resumeTime && (
@@ -460,89 +473,66 @@ export function PlayerPageNew({
         </div>
       )}
 
-      {/* Controls overlay */}
-      {showControls && (
-        <div className="absolute inset-0 pointer-events-none">
-          {/* Top controls */}
-          <div className="absolute top-0 left-0 right-0 p-4 pointer-events-auto">
-            <div className="flex items-center justify-between">
-              <button
-                onClick={onBack}
-                className="p-2 bg-black bg-opacity-50 text-white rounded-full hover:bg-opacity-75 transition-all"
-              >
-                <ArrowLeft className="w-6 h-6" />
-              </button>
-              
-              <div className="text-white">
-                <h1 className="text-lg font-semibold">{title}</h1>
-                {sourceDetails && (
-                  <p className="text-xs text-gray-400 mt-1">{sourceDetails}</p>
-                )}
-              </div>
-              
-              <button
-                onClick={() => setShowSettings(!showSettings)}
-                className="p-2 bg-black bg-opacity-50 text-white rounded-full hover:bg-opacity-75 transition-all"
-              >
-                ⚙️
-              </button>
-            </div>
-          </div>
+      <button
+        onClick={onBack}
+        className={`absolute top-6 left-6 z-40 w-12 h-12 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center transition-all focus:outline-none focus:ring-2 focus:ring-white/50 ${
+          showControls ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        }`}
+      >
+        <ArrowLeft className="w-6 h-6" />
+      </button>
 
-          {/* Center play button */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-auto">
-            <button
-              onClick={isPlaying ? handlePause : handlePlay}
-              className="p-4 bg-black bg-opacity-50 text-white rounded-full hover:bg-opacity-75 transition-all"
-            >
-              {isPlaying ? '⏸️' : '▶️'}
-            </button>
-          </div>
+      {currentStream && (
+        <>
+          <PlayerControls
+            isPlaying={isPlaying}
+            currentTime={currentTime}
+            duration={duration}
+            buffered={buffered}
+            isBuffering={false}
+            volume={volume}
+            isMuted={muted}
+            currentQualityLabel={currentStream.quality || 'Unknown'}
+            sourceDetails={sourceDetails}
+            title={title}
+            subtitle=""
+            visible={showControls && !showSettings}
+            onPlayPause={isPlaying ? handlePause : handlePlay}
+            onSeek={handleSeek}
+            onSkipBack={() => handleSeek(Math.max(0, currentTime - 10))}
+            onSkipForward={() => handleSeek(Math.min(duration, currentTime + 10))}
+            onVolumeChange={handleVolumeChange}
+            onMuteToggle={handleMuteToggle}
+            onFullscreen={() => {
+              if (videoRef.current) {
+                if (videoRef.current.requestFullscreen) {
+                  videoRef.current.requestFullscreen();
+                }
+              }
+            }}
+            onOpenSettings={() => setShowSettings(true)}
+          />
 
-          {/* Bottom controls */}
-          <div className="absolute bottom-0 left-0 right-0 p-4 pointer-events-auto">
-            <PlayerControls
-              isPlaying={isPlaying}
-              currentTime={currentTime}
-              duration={duration}
-              volume={volume}
-              muted={muted}
-              buffered={buffered}
-              onPlay={handlePlay}
-              onPause={handlePause}
-              onSeek={handleSeek}
-              onVolumeChange={handleVolumeChange}
-              onMuteToggle={handleMuteToggle}
-              sourceDetails={sourceDetails}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Settings panel */}
-      {showSettings && (
-        <SettingsPanel
-          qualities={qualities}
-          audioTracks={audioTracks}
-          textTracks={textTracks}
-          subtitles={subtitles}
-          currentQuality={currentQuality}
-          currentAudioTrack={currentAudioTrack}
-          currentTextTrack={currentTextTrack}
-          onQualityChange={handleQualityChange}
-          onAudioTrackChange={handleAudioTrackChange}
-          onTextTrackChange={handleTextTrackChange}
-          onAttachSubtitle={handleAttachSubtitle}
-          onClose={() => setShowSettings(false)}
-        />
-      )}
-
-      {/* Incompatible source sheet */}
-      {showIncompatibleSheet && (
-        <IncompatibleSourceSheet
-          onClose={() => setShowIncompatibleSheet(false)}
-          onRetry={() => window.location.reload()}
-        />
+          <SettingsPanel
+            visible={showSettings}
+            currentStream={currentStream}
+            allStreams={streams}
+            availableQualities={qualities}
+            currentQuality={currentQuality}
+            playbackSpeed={1.0}
+            subtitlesEnabled={false}
+            currentSubtitle=""
+            availableSubtitles={textTracks}
+            availableAudioTracks={audioTracks}
+            currentAudioTrack={currentAudioTrack?.id}
+            onClose={() => setShowSettings(false)}
+            onQualityChange={handleQualityChange}
+            onStreamChange={() => {}}
+            onSpeedChange={() => {}}
+            onSubtitleChange={handleTextTrackChange}
+            onAudioTrackChange={handleAudioTrackChange}
+          />
+        </>
       )}
     </div>
   );

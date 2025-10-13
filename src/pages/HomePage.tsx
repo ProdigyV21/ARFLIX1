@@ -777,16 +777,6 @@ export function HomePage({ onNavigate }: HomePageProps) {
 
   return (
     <div ref={containerRef} className="min-h-screen">
-      {/* Test Button for PlayerPageNew */}
-      <div className="p-4 bg-red-600 text-white text-center">
-        <button
-          onClick={() => onNavigate('simple-player-test')}
-          className="px-4 py-2 bg-white text-red-600 rounded hover:bg-gray-100"
-        >
-          🧪 Test PlayerPageNew (Fight Club)
-        </button>
-      </div>
-      
       <HeroRotator
         onPlayClick={(item: Title) => {
           if (!hasAddons) {
