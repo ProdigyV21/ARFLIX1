@@ -949,15 +949,18 @@ export function PlayerPage({
 
       // Enable ONLY the selected track
       if (subtitleId) {
+        let found = false;
         for (let i = 0; i < trackElements.length; i++) {
-          const trackElement = trackElements[i] as HTMLTrackElement;
-          const trackId = trackElement.id;
-          
-          if (trackId === subtitleId) {
-            tracks[i].mode = 'showing';
-            console.log(`[PlayerPage] ✅ Enabled subtitle: ${tracks[i].label} (ID: ${trackId})`);
+          const el = trackElements[i] as HTMLTrackElement;
+          if (el.id === subtitleId && el.track) {
+            el.track.mode = 'showing';
+            console.log(`[PlayerPage] ✅ Enabled subtitle via element.track: ${el.label} (ID: ${subtitleId})`);
+            found = true;
             break;
           }
+        }
+        if (!found) {
+          setTimeout(() => handleSubtitleChange(subtitleId), 300);
         }
       } else {
         console.log('[PlayerPage] Subtitles turned OFF');
