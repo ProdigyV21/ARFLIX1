@@ -366,6 +366,112 @@ export function PlayerPageNew({
     loadStreams();
   }, [contentId, contentType, seasonNumber, episodeNumber]);
 
+  // Add subtitle tracks to video element
+  function addSubtitleTracks() {
+    const video = videoRef.current;
+    if (!video || subtitles.length === 0) return;
+
+    console.log('[PlayerPage] ★★★★★ ADDING SUBTITLES ★★★★★');
+    console.log('[PlayerPage] Adding', subtitles.length, 'subtitle tracks');
+
+    // Remove only non-embedded tracks
+    const trackElements = Array.from(video.querySelectorAll('track'));
+    trackElements.forEach(trackEl => {
+      if (trackEl.getAttribute('src')) {
+        video.removeChild(trackEl);
+      }
+    });
+
+    // Add external subtitle tracks
+    subtitles.forEach(async (sub, index) => {
+      if (sub.format === 'embedded') return;
+
+      try {
+        console.log('[PlayerPage] 🔄 Fetching subtitle:', sub.label, sub.url);
+        
+        const response = await fetch(sub.url);
+        if (!response.ok) {
+          console.error('[PlayerPage] Failed to fetch subtitle:', response.status);
+          return;
+        }
+        
+        let content = await response.text();
+        console.log('[PlayerPage] ✅ Fetched subtitle, length:', content.length);
+        
+        // Convert SRT to WebVTT if needed
+        if (!content.startsWith('WEBVTT')) {
+          console.log('[PlayerPage] Converting SRT to WebVTT...');
+          content = 'WEBVTT\n\n' + content
+            .replace(/\r\n/g, '\n')
+            .replace(/(\d{2}:\d{2}:\d{2}),(\d{3})/g, '$1.$2');
+        }
+        
+        const blob = new Blob([content], { type: 'text/vtt' });
+        const dataUrl = URL.createObjectURL(blob);
+        
+        const track = document.createElement('track');
+        track.kind = 'subtitles';
+        track.label = sub.label;
+        track.srclang = sub.languageCode;
+        track.src = dataUrl;
+        track.id = sub.id || `sub-${index}`;
+        
+        console.log('[PlayerPage] ✅ Created subtitle track:', sub.label);
+
+        track.addEventListener('load', () => {
+          console.log('[PlayerPage] 🎉 Subtitle track loaded successfully:', sub.label);
+        });
+
+        track.addEventListener('error', (e) => {
+          console.error('[PlayerPage] ❌ Subtitle track load error:', sub.label, e);
+        });
+
+        video.appendChild(track);
+      } catch (error) {
+        console.error('[PlayerPage] Error processing subtitle:', sub.label, error);
+      }
+    });
+
+    setTimeout(() => {
+      console.log('[PlayerPage] TextTracks available:', video.textTracks.length);
+
+      // Find the FIRST subtitle that matches preferred language and enable ONLY that one
+      let foundPreferred = false;
+      
+      for (let i = 0; i < video.textTracks.length; i++) {
+        const track = video.textTracks[i];
+        const trackElement = Array.from(video.querySelectorAll('track'))[i] as HTMLTrackElement;
+        const trackId = trackElement?.id;
+        
+        console.log(`[PlayerPage] Track ${i}:`, {
+          id: trackId,
+          language: track.language,
+          label: track.label,
+          kind: track.kind,
+          mode: track.mode
+        });
+
+        // Enable ONLY the first subtitle that matches preferred language
+        if (!foundPreferred && preferredSubtitleLang && track.language === preferredSubtitleLang) {
+          track.mode = 'showing';
+          setCurrentTextTrack(trackId || track.language);
+          foundPreferred = true;
+          console.log('[PlayerPage] ✅ Enabled FIRST subtitle track:', track.label, 'ID:', trackId);
+
+          track.addEventListener('cuechange', () => {
+            console.log('[PlayerPage] Cue changed, active cues:', track.activeCues?.length);
+          });
+        } else {
+          track.mode = 'hidden';
+        }
+      }
+      
+      if (!foundPreferred) {
+        console.log('[PlayerPage] No preferred subtitle found, all tracks hidden');
+      }
+    }, 500);
+  }
+
   // Load subtitles
   useEffect(() => {
     const loadSubtitles = async () => {
@@ -407,6 +513,13 @@ export function PlayerPageNew({
 
     loadSubtitles();
   }, [currentStream, contentId, contentType, seasonNumber, episodeNumber]);
+
+  // Add subtitles when they are loaded
+  useEffect(() => {
+    if (subtitles.length > 0) {
+      addSubtitleTracks();
+    }
+  }, [subtitles, preferredSubtitleLang]);
 
   // Load user preferences
   useEffect(() => {
