@@ -500,6 +500,7 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
                       toggleWatched(`${seriesKeyPrefix}:s${selectedSeason}:e${epNum}`);
                     });
                   }
+                  window.dispatchEvent(new CustomEvent('watched:changed'));
                 }}
               >
                 {watchedKeys.has(`${meta.type}:${contentId}`) ? (

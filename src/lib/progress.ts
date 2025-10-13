@@ -76,6 +76,7 @@ export async function saveProgress(progress: WatchProgress): Promise<void> {
       if (!set.has(key)) {
         set.add(key);
         localStorage.setItem('watched', JSON.stringify(Array.from(set)));
+        window.dispatchEvent(new CustomEvent('watched:changed'));
       }
     }
   } catch {}

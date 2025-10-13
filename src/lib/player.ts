@@ -79,6 +79,9 @@ export function createPlayer(
 
       hls.on(Hls.Events.MANIFEST_PARSED, () => {
         selectHighestHls();
+        // Re-assert shortly in case levels update late
+        setTimeout(selectHighestHls, 500);
+        setTimeout(selectHighestHls, 1500);
       });
 
       hls.on(Hls.Events.ERROR, (_event, data) => {

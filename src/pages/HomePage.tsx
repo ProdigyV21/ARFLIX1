@@ -592,11 +592,27 @@ export function HomePage({ onNavigate }: HomePageProps) {
           ? arr.map((v) => typeof v === 'string' ? v : (v?.key || ''))
               .filter(Boolean)
           : [];
-        setWatchlistIds(new Set(keys));
+        // migrate legacy id-only values to type:id
+        const normalized = keys.map(k => k.includes(':') ? k : `movie:${k}`);
+        setWatchlistIds(new Set(normalized));
+        // write-back normalization once
+        localStorage.setItem('watchlist', JSON.stringify(normalized));
       }
     } catch (error) {
       console.error('Failed to load watchlist:', error);
     }
+  }, []);
+
+  // Live updates for watched badges
+  useEffect(() => {
+    const onWatchedChanged = () => {
+      try {
+        const raw = localStorage.getItem('watched');
+        setWatchedIds(new Set(raw ? JSON.parse(raw) : []));
+      } catch {}
+    };
+    window.addEventListener('watched:changed', onWatchedChanged);
+    return () => window.removeEventListener('watched:changed', onWatchedChanged);
   }, []);
 
   useEffect(() => {
@@ -737,9 +753,9 @@ export function HomePage({ onNavigate }: HomePageProps) {
       
       // Persist to localStorage
       try {
-        // Store as array of objects for future-proofing
-        const payload = Array.from(next).map(k => ({ key: k }));
-        localStorage.setItem('watchlist', JSON.stringify(payload));
+        // Store normalized string keys; migrate legacy on load elsewhere
+        localStorage.setItem('watchlist', JSON.stringify(Array.from(next)));
+        window.dispatchEvent(new CustomEvent('watchlist:changed'));
       } catch (error) {
         console.error('Failed to save watchlist:', error);
       }
