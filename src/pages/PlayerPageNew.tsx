@@ -626,7 +626,13 @@ export function PlayerPageNew({
         className="w-full h-full object-contain"
         playsInline
         crossOrigin="anonymous"
-        onClick={handleVideoClick}
+        onClick={() => {
+          if (isPlaying) {
+            handlePause();
+          } else {
+            handlePlay();
+          }
+        }}
       />
 
       {/* Loading Screen */}
