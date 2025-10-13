@@ -9,71 +9,46 @@ export interface Subtitle {
 
 export async function fetchSubtitles(
   contentId: string,
+  contentType: string,
   season?: number,
   episode?: number
 ): Promise<Subtitle[]> {
   try {
-    // Fetch directly from OpenSubtitles REST API (client-side fetching works!)
-    const imdbId = contentId.startsWith('tt') ? contentId.replace('tt', '') : contentId;
+    // Fetch subtitles from backend (which uses Stremio addons)
+    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+    const params = new URLSearchParams();
+    params.set('id', contentId);
+    params.set('type', contentType);
+    if (season !== undefined) params.set('season', season.toString());
+    if (episode !== undefined) params.set('episode', episode.toString());
 
-    const osUrl = (season && episode)
-      ? `https://rest.opensubtitles.org/search/episode-${episode}/imdbid-${imdbId}/season-${season}/sublanguageid-all`
-      : `https://rest.opensubtitles.org/search/imdbid-${imdbId}/sublanguageid-all`;
+    const url = `${supabaseUrl}/functions/v1/catalog-subtitles?${params}`;
+    console.log('[fetchSubtitles] Fetching from backend:', url);
 
-    console.log('[fetchSubtitles] Fetching from OpenSubtitles (client-side):', osUrl);
-
-    const response = await fetch(osUrl, {
-      headers: {
-        'User-Agent': 'Arflix v1.0'
-      }
-    });
+    const response = await fetch(url);
 
     if (!response.ok) {
-      console.warn('[fetchSubtitles] OpenSubtitles response not OK:', response.status);
+      console.warn('[fetchSubtitles] Backend response not OK:', response.status);
       return [];
     }
 
     const data = await response.json();
 
-    if (!Array.isArray(data) || data.length === 0) {
+    if (!data.subtitles || !Array.isArray(data.subtitles) || data.subtitles.length === 0) {
       console.info('[fetchSubtitles] No subtitles available');
       return [];
     }
 
-    console.log('[fetchSubtitles] Found', data.length, 'subtitles from OpenSubtitles');
-
-    // Take up to 10 unique language subtitles
-    const seen = new Set<string>();
-    const subtitles: Subtitle[] = [];
-
-    for (const sub of data) {
-      const langCode = getLangCode(sub.SubLanguageID || sub.ISO639 || '');
-      const key = `${langCode}-${sub.SubFormat}`;
-
-      if (!seen.has(key) && sub.SubDownloadLink) {
-        seen.add(key);
-
-        subtitles.push({
-          id: sub.IDSubtitleFile || sub.IDSubtitle,
-          language: getLangLabel(langCode),
-          languageCode: langCode,
-          url: sub.SubDownloadLink,
-          label: `${getLangLabel(langCode)} (${sub.SubFormat || 'srt'})`,
-          format: sub.SubFormat || 'srt'
-        });
-
-        if (subtitles.length >= 10) break;
-      }
-    }
+    console.log('[fetchSubtitles] Found', data.subtitles.length, 'subtitles from backend');
 
     // Cache results in-memory for 1h to avoid repeated fetches
     try {
       const key = `subs:${contentId}:${season || ''}:${episode || ''}`;
-      const payload = { ts: Date.now(), items: subtitles };
+      const payload = { ts: Date.now(), items: data.subtitles };
       localStorage.setItem(key, JSON.stringify(payload));
     } catch {}
 
-    return subtitles;
+    return data.subtitles;
   } catch (error: any) {
     console.error('[fetchSubtitles] Error fetching subtitles:', error);
     return [];
@@ -82,6 +57,7 @@ export async function fetchSubtitles(
 
 export async function fetchSubtitlesWithCache(
   contentId: string,
+  contentType: string,
   season?: number,
   episode?: number
 ): Promise<Subtitle[]> {
@@ -93,7 +69,7 @@ export async function fetchSubtitlesWithCache(
       if (Date.now() - ts < 3600_000 && Array.isArray(items)) return items;
     }
   } catch {}
-  return fetchSubtitles(contentId, season, episode);
+  return fetchSubtitles(contentId, contentType, season, episode);
 }
 
 function getLangCode(osLang: string): string {
