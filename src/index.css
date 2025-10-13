@@ -34,11 +34,18 @@ video::cue {
   color: white;
   font-family: 'Inter Tight', Arial, sans-serif;
   font-weight: 700;
+  text-align: center;
+  position: relative;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: 80%;
+  margin: 0 auto;
 }
 
 @media (max-width: 768px) {
   video::cue {
     font-size: var(--subs-font-size-mobile);
+    max-width: 90%;
   }
 }
 
