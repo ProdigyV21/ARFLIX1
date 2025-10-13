@@ -17,7 +17,7 @@ export type ExternalIdInput = {
   anilistId?: number;
 };
 
-const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY || '';
+const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY || '080380c1ad7b3967af3def25159e4374';
 const TMDB_BASE = 'https://api.themoviedb.org/3';
 
 const cache = new Map<string, { data: ExternalIds; expires: number }>();
@@ -52,11 +52,18 @@ export async function getExternalIds(input: ExternalIdInput): Promise<ExternalId
     result.tmdbTvId = input.tmdbId;
 
     try {
-      const res = await fetch(`${TMDB_BASE}/tv/${input.tmdbId}/external_ids?api_key=${TMDB_API_KEY}`);
+      const url = `${TMDB_BASE}/tv/${input.tmdbId}/external_ids?api_key=${TMDB_API_KEY}`;
+      console.log('[getExternalIds] Fetching TV external IDs:', url.replace(TMDB_API_KEY, 'API_KEY'));
+      const res = await fetch(url);
+      console.log('[getExternalIds] Response status:', res.status);
       if (res.ok) {
         const data = await res.json();
+        console.log('[getExternalIds] External IDs data:', data);
         if (data.imdb_id) result.imdbId = data.imdb_id;
         if (data.tvdb_id) result.tvdbId = data.tvdb_id;
+      } else {
+        const errorText = await res.text();
+        console.error('[getExternalIds] TMDB API error:', res.status, errorText);
       }
     } catch (error) {
       console.error('TMDB TV external IDs fetch failed:', error);
