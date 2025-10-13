@@ -236,6 +236,12 @@ export function PlayerPageNew({
     video.addEventListener('volumechange', handleVolumeChange);
     video.addEventListener('progress', handleProgress);
 
+    // Force initial update
+    if (video.duration) {
+      setDuration(video.duration);
+      setCurrentTime(video.currentTime);
+    }
+
     return () => {
       video.removeEventListener('timeupdate', handleTimeUpdate);
       video.removeEventListener('durationchange', handleDurationChange);
@@ -244,7 +250,7 @@ export function PlayerPageNew({
       video.removeEventListener('volumechange', handleVolumeChange);
       video.removeEventListener('progress', handleProgress);
     };
-  }, []);
+  }, [currentStream]);
 
   // Load streams
   useEffect(() => {
