@@ -149,7 +149,7 @@ export function PlayerPageNew({
         
         setStreams(enriched);
         
-        const caps = getDeviceCapabilities();
+        const caps = await getDeviceCapabilities();
         console.log('[PlayerPage] Device capabilities:', caps);
         
         const playableSource = selectPlayableSource(
