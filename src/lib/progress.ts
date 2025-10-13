@@ -26,7 +26,18 @@ import { supabase } from './supabase';
  */
 export async function saveProgress(progress: WatchProgress): Promise<void> {
   const all = getAllProgress();
-  const index = all.findIndex(p => p.id === progress.id);
+  
+  // Create unique key for series episodes: id:season:episode
+  const progressKey = progress.seasonNumber && progress.episodeNumber 
+    ? `${progress.id}:s${progress.seasonNumber}:e${progress.episodeNumber}`
+    : progress.id;
+  
+  const index = all.findIndex(p => {
+    const existingKey = p.seasonNumber && p.episodeNumber 
+      ? `${p.id}:s${p.seasonNumber}:e${p.episodeNumber}`
+      : p.id;
+    return existingKey === progressKey;
+  });
 
   if (index !== -1) {
     all[index] = progress;
@@ -82,9 +93,20 @@ export async function saveProgress(progress: WatchProgress): Promise<void> {
   } catch {}
 }
 
-export function getProgress(id: string): WatchProgress | null {
+export function getProgress(id: string, seasonNumber?: number, episodeNumber?: number): WatchProgress | null {
   const all = getAllProgress();
-  return all.find(p => p.id === id) || null;
+  
+  // Create unique key for series episodes: id:season:episode
+  const progressKey = seasonNumber && episodeNumber 
+    ? `${id}:s${seasonNumber}:e${episodeNumber}`
+    : id;
+  
+  return all.find(p => {
+    const existingKey = p.seasonNumber && p.episodeNumber 
+      ? `${p.id}:s${p.seasonNumber}:e${p.episodeNumber}`
+      : p.id;
+    return existingKey === progressKey;
+  }) || null;
 }
 
 export function getAllProgress(): WatchProgress[] {

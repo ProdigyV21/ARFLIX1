@@ -25,7 +25,7 @@
   --subs-bottom-margin: 4rem;
 }
 
-/* Native video text tracks - center screen positioning */
+/* Native video text tracks - Netflix/Stremio style bottom positioning */
 video::cue {
   font-size: var(--subs-font-size);
   line-height: var(--subs-line-height);
@@ -33,7 +33,7 @@ video::cue {
   background: transparent;
   color: white;
   font-family: 'Inter Tight', Arial, sans-serif;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 @media (max-width: 768px) {
@@ -41,23 +41,6 @@ video::cue {
     font-size: var(--subs-font-size-mobile);
   }
 }
-
-/* Player subtitle overlay for safe-area positioning */
-.player-subtitles {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  width: min(90%, 1200px);
-  text-align: center;
-  line-height: var(--subs-line-height);
-  letter-spacing: 0.01em;
-  text-shadow: var(--subs-shadow);
-  pointer-events: none;
-  font-size: var(--subs-font-size);
-  font-weight: 600;
-}
-.player-subtitles .line { margin: 0.15em 0; }
 
 @layer base {
   * {

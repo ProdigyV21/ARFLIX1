@@ -651,6 +651,21 @@ export function PlayerPage({
         detectEmbeddedSubtitles();
 
         addSubtitleTracks();
+
+        // Detect audio tracks from media engine
+        if (engineRef.current) {
+          const tracks = getAudioTracks(engineRef.current);
+          console.log('[PlayerPage] Audio tracks from engine:', tracks);
+          setAvailableAudioTracks(tracks);
+          if (tracks.length > 0 && currentAudioTrack === undefined) {
+            // Auto-select first English track or just first track
+            const englishTrack = tracks.find(t => t.language === 'en' || t.language === 'eng');
+            const defaultTrack = englishTrack || tracks[0];
+            setCurrentAudioTrack(defaultTrack.id);
+            setAudioTrack(engineRef.current, defaultTrack.id);
+            console.log('[PlayerPage] Auto-selected audio track:', defaultTrack);
+          }
+        }
       });
 
       video.addEventListener('timeupdate', () => {
@@ -722,7 +737,7 @@ export function PlayerPage({
 
   useEffect(() => {
     if (currentStream && videoRef.current) {
-      const existingProgress = getProgress(contentId);
+      const existingProgress = getProgress(contentId, seasonNumber, episodeNumber);
       if (shouldShowResumePrompt(existingProgress)) {
         setResumeTime(existingProgress!.currentTime);
         setShowResumePrompt(true);
