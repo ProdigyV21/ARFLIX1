@@ -5,6 +5,7 @@ import { Sidebar } from './components/Sidebar';
 import { HomePage } from './pages/HomePage';
 import { DetailsPage } from './pages/DetailsPage';
 import { PlayerPage } from './pages/PlayerPage';
+import { PlayerPageNew } from './pages/PlayerPageNew';
 import { AddonsPage } from './pages/AddonsPage';
 import { SettingsPage } from './pages/SettingsPage';
 import { SearchPage } from './pages/SearchPage';
@@ -100,7 +101,7 @@ function App() {
 
       case 'player':
         return (
-          <PlayerPage
+          <PlayerPageNew
             contentId={currentPage.data?.id}
             contentType={currentPage.data?.type}
             addonId={currentPage.data?.addonId}
