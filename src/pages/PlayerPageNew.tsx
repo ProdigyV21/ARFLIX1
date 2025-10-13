@@ -153,22 +153,56 @@ export function PlayerPageNew({
         console.log('[PlayerPage] Device capabilities:', caps);
         
         const playableSource = selectPlayableSource(
-          response.items.map((s: any) => ({
-            url: s.url,
-            title: s.title,
-            quality: s.quality,
-            kind: s.kind
-          })),
+          response.items.map((s: any) => {
+            // Determine kind from URL if not provided
+            let kind: 'hls' | 'dash' | 'mp4' | 'unknown' = 'unknown';
+            if (s.kind) {
+              kind = s.kind;
+            } else if (s.url) {
+              const url = s.url.toLowerCase();
+              if (url.includes('.m3u8') || url.includes('hls')) {
+                kind = 'hls';
+              } else if (url.includes('.mpd') || url.includes('dash')) {
+                kind = 'dash';
+              } else if (url.includes('.mp4')) {
+                kind = 'mp4';
+              }
+            }
+            
+            return {
+              url: s.url,
+              title: s.title || 'Unknown',
+              quality: s.quality,
+              kind
+            };
+          }),
           caps
         );
         
-        const classified = enriched.map((s: any) => ({
-          url: s.url,
-          title: s.title,
-          quality: s.quality,
-          kind: s.kind,
-          classification: playableSource?.classification || { isPlayable: false, incompatibilityReasons: [], score: 0 }
-        }));
+        const classified = enriched.map((s: any) => {
+          // Determine kind from URL if not provided
+          let kind: 'hls' | 'dash' | 'mp4' | 'unknown' = 'unknown';
+          if (s.kind) {
+            kind = s.kind;
+          } else if (s.url) {
+            const url = s.url.toLowerCase();
+            if (url.includes('.m3u8') || url.includes('hls')) {
+              kind = 'hls';
+            } else if (url.includes('.mpd') || url.includes('dash')) {
+              kind = 'dash';
+            } else if (url.includes('.mp4')) {
+              kind = 'mp4';
+            }
+          }
+          
+          return {
+            url: s.url,
+            title: s.title,
+            quality: s.quality,
+            kind,
+            classification: playableSource?.classification || { isPlayable: false, incompatibilityReasons: [], score: 0 }
+          };
+        });
         
         setClassifiedStreams(classified as StreamWithClassification[]);
         
