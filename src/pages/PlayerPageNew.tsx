@@ -72,12 +72,142 @@ export function PlayerPageNew({
   const [resumeTime, setResumeTime] = useState<number | null>(null);
   const [showResumePrompt, setShowResumePrompt] = useState(false);
 
-  // Initialize video element
-  useEffect(() => {
-    if (videoRef.current && engineRef.current) {
-      attach(videoRef.current);
+  // Initialize player with stream
+  const initializePlayer = useCallback(async (stream: NormalizedStream, startTime?: number) => {
+    if (!videoRef.current) return;
+
+    const video = videoRef.current;
+    console.log('[PlayerPage] Initializing player with stream:', { url: stream.url, kind: stream.kind, quality: stream.quality });
+
+    // Check if this is a Torrentio "downloading" placeholder
+    if (stream.url.includes('torrentio.strem.fun') && stream.url.includes('/videos/downloading')) {
+      console.log('[PlayerPage] Torrentio is caching torrent to Real-Debrid...');
+      setError('⏳ Torrentio is caching this torrent to Real-Debrid. This may take 1-5 minutes for the first play. Please try again in a moment, or select a different source.');
+      setLoading(false);
+      return;
     }
-  }, [attach]);
+
+    let streamUrl = stream.url;
+
+    try {
+      const engine = await attach(
+        video,
+        streamUrl,
+        stream.kind,
+        (error) => {
+          console.error('Player error:', error);
+          
+          if (error.message.includes('downloading') || error.message.includes('404')) {
+            setError('⏳ Torrentio is still caching this content to Real-Debrid. Please wait 1-2 minutes and try again, or select a different source.');
+          } else {
+            setError(`Playback error: ${error.message}. Trying fallback...`);
+          }
+
+          setTimeout(() => {
+            const nextStream = streams.find((s: any) => s.url !== stream.url);
+            if (nextStream) {
+              initializePlayer(nextStream, video.currentTime);
+            }
+          }, 2000);
+        },
+        () => {
+          // onManifestParsed - wait for manifest before playing
+          video.volume = 1;
+          video.muted = false;
+          video.play().catch(e => {
+            console.warn('Autoplay failed:', e);
+          });
+        }
+      );
+
+      video.addEventListener('loadedmetadata', () => {
+        const dur = video.duration;
+        
+        if (!video.paused) {
+          // Already playing
+        } else {
+          video.play().catch(e => {
+            console.warn('[PlayerPage] Autoplay after metadata failed:', e);
+          });
+        }
+        
+        if (dur && isFinite(dur)) {
+          setDuration(dur);
+        }
+
+        if (startTime && startTime > 0 && startTime < dur) {
+          video.currentTime = startTime;
+        }
+
+        const qualities = getAvailableQualities(engine);
+        if (qualities.length > 0) {
+          setQualities(['auto', ...qualities]);
+        } else {
+          setQualities([]);
+        }
+
+        const current = getCurrentQuality(engine);
+        setCurrentQuality(current);
+
+        console.log('[PlayerPage] === METADATA LOADED ===');
+        console.log('[PlayerPage] Duration:', dur);
+        console.log('[PlayerPage] Video dimensions:', video.videoWidth, 'x', video.videoHeight);
+
+        // Check if this is a Torrentio "downloading" placeholder video
+        if (dur > 0 && dur <= 120 && (contentType === 'series' || contentType === 'anime')) {
+          if (dur < 300) {
+            console.warn('[PlayerPage] ⚠️  Detected very short video (' + Math.round(dur) + 's) for TV show - likely uncached torrent');
+            setError('⏳ This stream is not cached. Trying next stream...');
+            
+            setTimeout(() => {
+              const nextStream = streams.find((s: any) => s.url !== stream.url);
+              if (nextStream) {
+                console.log('[PlayerPage] Auto-skipping to next stream');
+                initializePlayer(nextStream, 0);
+              } else {
+                setError('No cached streams found. Please try again later or use a different addon.');
+                setLoading(false);
+              }
+            }, 2000);
+            return;
+          }
+        }
+
+        // Detect audio tracks from media engine
+        if (engineRef.current) {
+          const tracks = getAudioTracks(engineRef.current);
+          console.log('[PlayerPage] Audio tracks from engine:', tracks);
+          setAudioTracks(tracks);
+          if (tracks.length > 0 && currentAudioTrack === undefined) {
+            const englishTrack = tracks.find((t: any) => t.language === 'en' || t.language === 'eng');
+            const defaultTrack = englishTrack || tracks[0];
+            setCurrentAudioTrack(defaultTrack);
+            setAudioTrack(engineRef.current, defaultTrack.id);
+            console.log('[PlayerPage] Auto-selected audio track:', defaultTrack);
+          }
+        }
+      });
+
+      setLoading(false);
+    } catch (err: any) {
+      console.error('Failed to initialize player:', err);
+      setError(err.message || 'Failed to initialize player');
+      setLoading(false);
+    }
+  }, [streams, attach, contentType, engineRef]);
+
+  // Initialize player when stream is selected
+  useEffect(() => {
+    if (currentStream && videoRef.current) {
+      const existingProgress = getProgress(contentId, seasonNumber, episodeNumber);
+      if (shouldShowResumePrompt(existingProgress)) {
+        setResumeTime(existingProgress!.currentTime);
+        setShowResumePrompt(true);
+      } else {
+        initializePlayer(currentStream);
+      }
+    }
+  }, [currentStream, contentId, seasonNumber, episodeNumber, initializePlayer]);
 
   // Video event handlers
   useEffect(() => {
@@ -219,19 +349,10 @@ export function PlayerPageNew({
         if (matchingStream) {
           setCurrentStream(matchingStream);
           setSourceDetails(matchingStream.title || matchingStream.name || 'Unknown Source');
-          
-          // Load the source using existing media engine
-          if (engineRef.current) {
-            await engineRef.current.load(matchingStream.url);
-          }
         } else if (response.items.length > 0) {
           console.log('[PlayerPage] Fallback to first stream');
           setCurrentStream(response.items[0]);
           setSourceDetails(response.items[0].title || response.items[0].name || 'Unknown Source');
-          
-          if (engineRef.current) {
-            await engineRef.current.load(response.items[0].url);
-          }
         }
         
         setLoading(false);
@@ -457,15 +578,18 @@ export function PlayerPageNew({
   }, []);
 
   const handleResume = useCallback(() => {
-    if (resumeTime) {
-      handleSeek(resumeTime);
-    }
     setShowResumePrompt(false);
-  }, [resumeTime, handleSeek]);
+    if (currentStream && resumeTime) {
+      initializePlayer(currentStream, resumeTime);
+    }
+  }, [currentStream, resumeTime, initializePlayer]);
 
   const handleStartFromBeginning = useCallback(() => {
     setShowResumePrompt(false);
-  }, []);
+    if (currentStream) {
+      initializePlayer(currentStream);
+    }
+  }, [currentStream, initializePlayer]);
 
   if (loading) {
     return (
