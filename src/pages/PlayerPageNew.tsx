@@ -120,47 +120,90 @@ export function PlayerPageNew({
   useEffect(() => {
     const loadStreams = async () => {
       try {
+        setLoading(true);
+        setError(null);
+        
         console.log('[PlayerPage] Loading streams with:', { contentId, contentType, seasonNumber, episodeNumber });
         
         const response = await fetchStreams(contentType, contentId, seasonNumber, episodeNumber);
         console.log('[PlayerPage] Streams response:', response);
         
-        if (response.items && response.items.length > 0) {
-          setStreams(response.items);
-          
-          const deviceCapabilities = getDeviceCapabilities();
-          console.log('[PlayerPage] Device capabilities:', deviceCapabilities);
-          
-          // Use selectPlayableSource to classify and select the best stream
-          const playableSource = selectPlayableSource(
-            response.items.map(s => ({
-              url: s.url,
-              title: s.title || s.name || 'Unknown',
-              quality: s.quality,
-              kind: s.kind || 'unknown'
-            })),
-            deviceCapabilities
-          );
-          console.log('[PlayerPage] Selected playable source:', playableSource);
-          
-          if (playableSource) {
-            setCurrentStream(playableSource);
-            setSourceDetails(playableSource.title || playableSource.name || 'Unknown Source');
-            
-            // Load the source using existing media engine
-            if (engineRef.current) {
-              await engineRef.current.load(playableSource.url);
-            }
-          } else {
-            setShowIncompatibleSheet(true);
-          }
-        } else {
-          setError('No streams available for this content');
+        if (!response.items || response.items.length === 0) {
+          const errorMsg = response.error || response.message || 'No streams found. Check your add-ons.';
+          console.error('[PlayerPage] No streams:', errorMsg);
+          setError(errorMsg);
+          setLoading(false);
+          return;
         }
+        
+        // Enrich streams with additional info if available
+        const enriched = response.items.map((s: any) => ({
+          ...s,
+          provider: s.provider || s.sourceName || s.host,
+          qualityLabel: s.qualityLabel || (s.quality ? `${s.quality}p` : undefined),
+          filesizeBytes: s.filesizeBytes || s.fileSizeBytes || s.sizeBytes,
+          seeds: s.seeds ?? s.seeders,
+          peers: s.peers,
+          sourceType: s.sourceType || (s.infoHash ? 'torrent' : (s.url?.startsWith('http') ? 'http' : 'unknown')),
+        }));
+        
+        setStreams(enriched);
+        
+        const caps = getDeviceCapabilities();
+        console.log('[PlayerPage] Device capabilities:', caps);
+        
+        const playableSource = selectPlayableSource(
+          response.items.map((s: any) => ({
+            url: s.url,
+            title: s.title,
+            quality: s.quality,
+            kind: s.kind
+          })),
+          caps
+        );
+        
+        const classified = enriched.map((s: any) => ({
+          url: s.url,
+          title: s.title,
+          quality: s.quality,
+          kind: s.kind,
+          classification: playableSource?.classification || { isPlayable: false, incompatibilityReasons: [], score: 0 }
+        }));
+        
+        setClassifiedStreams(classified as StreamWithClassification[]);
+        
+        if (!playableSource) {
+          console.warn('[PlayerPage] No compatible sources found!');
+          setShowIncompatibleSheet(true);
+          setLoading(false);
+          return;
+        }
+        
+        console.log('[PlayerPage] Selected playable source:', playableSource.title);
+        
+        const matchingStream = response.items.find((s: any) => s.url === playableSource.url);
+        if (matchingStream) {
+          setCurrentStream(matchingStream);
+          setSourceDetails(matchingStream.title || matchingStream.name || 'Unknown Source');
+          
+          // Load the source using existing media engine
+          if (engineRef.current) {
+            await engineRef.current.load(matchingStream.url);
+          }
+        } else if (response.items.length > 0) {
+          console.log('[PlayerPage] Fallback to first stream');
+          setCurrentStream(response.items[0]);
+          setSourceDetails(response.items[0].title || response.items[0].name || 'Unknown Source');
+          
+          if (engineRef.current) {
+            await engineRef.current.load(response.items[0].url);
+          }
+        }
+        
+        setLoading(false);
       } catch (err) {
-        console.error('Failed to load streams:', err);
+        console.error('[PlayerPage] Failed to load streams:', err);
         setError(err instanceof Error ? err.message : 'Failed to load streams');
-      } finally {
         setLoading(false);
       }
     };
