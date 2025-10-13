@@ -89,6 +89,9 @@ export function PlayerPage({
       if (engineRef.current) {
         const tracks = getAudioTracks(engineRef.current);
         setAvailableAudioTracks(tracks);
+        if (tracks.length > 0 && currentAudioTrack === undefined) {
+          setCurrentAudioTrack(tracks[0].id);
+        }
       }
     }
   }, [currentStream, contentId, seasonNumber, episodeNumber]);
@@ -140,7 +143,19 @@ export function PlayerPage({
       }
 
       // Fallback: Use cached OpenSubtitles first
-      const cached = await fetchSubtitlesWithCache(contentId, seasonNumber, episodeNumber);
+      let cached = await fetchSubtitlesWithCache(contentId, seasonNumber, episodeNumber);
+      // Try romanized/native variants for anime-like titles if nothing found
+      if ((!cached || cached.length === 0) && title) {
+        const altTitles: string[] = [];
+        // naive split on ':' or '-' heuristics for potential alt name; in future, use TMDB alt-titles
+        if (title.includes(':')) altTitles.push(title.split(':')[0]);
+        if (title.includes('-')) altTitles.push(title.split('-')[0]);
+        for (const t of altTitles) {
+          const altId = contentId; // keep same id; providers resolve by id
+          const res = await fetchSubtitlesWithCache(altId, seasonNumber, episodeNumber);
+          if (res.length > 0) { cached = res; break; }
+        }
+      }
       if (cached.length > 0) {
         setAvailableSubtitles(cached);
         return;

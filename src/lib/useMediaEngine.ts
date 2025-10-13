@@ -229,12 +229,13 @@ export function getAudioTracks(engine: AttachResult): Array<{ id: number; label:
   }
 
   if (engine.engine === "dash" && engine.dash) {
-    const tracks = (engine.dash as any).getBitrateInfoListFor?.("audio");
-    return tracks?.map((track: any, idx: number) => ({
+    const api: any = engine.dash;
+    const audioTracks = api.getTracksFor?.("audio") || [];
+    return audioTracks.map((t: any, idx: number) => ({
       id: idx,
-      label: track.label || `Track ${idx + 1}`,
-      language: track.lang || "unknown",
-    })) || [];
+      label: t.lang ? `${t.lang.toUpperCase()} ${t.roles?.[0] ? `(${t.roles[0]})` : ''}`.trim() : `Track ${idx + 1}`,
+      language: t.lang || "unknown",
+    }));
   }
 
   return [];
@@ -246,6 +247,11 @@ export function setAudioTrack(engine: AttachResult, trackId: number) {
   }
 
   if (engine.engine === "dash" && engine.dash) {
-    (engine.dash as any).setCurrentTrack?.((engine.dash as any).getTracksFor?.("audio")[trackId]);
+    const api: any = engine.dash;
+    const aTracks = api.getTracksFor?.("audio") || [];
+    const chosen = aTracks[trackId];
+    if (chosen) {
+      api.setCurrentTrack?.(chosen);
+    }
   }
 }
