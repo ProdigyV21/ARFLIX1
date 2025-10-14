@@ -370,7 +370,7 @@ export function PlayerPageNew({
               if (unit === 'GB') sizeNumeric = value * 1024 * 1024 * 1024;
               else if (unit === 'MB') sizeNumeric = value * 1024 * 1024;
               else if (unit === 'TB') sizeNumeric = value * 1024 * 1024 * 1024 * 1024;
-              console.log('[PlayerPage] Extracted size from title:', s.title.substring(0, 60), '→', value, unit, '=', sizeNumeric, 'bytes');
+              console.log('[PlayerPage] ✅ Extracted size from title:', s.title.substring(0, 60), '→', value, unit, '=', sizeNumeric, 'bytes');
             }
           }
           
