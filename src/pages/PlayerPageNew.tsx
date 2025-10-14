@@ -405,11 +405,12 @@ export function PlayerPageNew({
         setStreams(enriched);
         
         // Log stream sizes for debugging
-        console.log('[PlayerPage] Stream sizes:', enriched.map((s: any) => ({
-          title: s.title?.substring(0, 50),
+        console.log('[PlayerPage] 📊 Stream sizes (first 10):', enriched.slice(0, 10).map((s: any) => ({
+          title: s.title?.substring(0, 80),
           filesizeBytes: s.filesizeBytes,
           sizeGB: s.filesizeBytes ? (s.filesizeBytes / 1024 / 1024 / 1024).toFixed(2) + ' GB' : 'NO SIZE'
         })));
+        console.log('[PlayerPage] 📊 Total streams:', enriched.length, '| With size:', enriched.filter((s: any) => s.filesizeBytes).length);
         
         const caps = await getDeviceCapabilities();
         console.log('[PlayerPage] Device capabilities:', caps);
