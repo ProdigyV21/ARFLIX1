@@ -1095,24 +1095,18 @@ export function PlayerPageNew({
       </button>
 
       {/* Title and Episode Info Overlay - Top Left */}
-      <div
-        className={`absolute top-6 left-20 z-30 transition-opacity ${
-          showControls && !showSettings ? 'opacity-100' : 'opacity-0'
-        }`}
-      >
-        <h2 className="text-white text-xl font-semibold">{title}</h2>
-        {episodeInfo && (
-          <p className="text-white/80 text-sm mt-1">{episodeInfo}</p>
-        )}
-      </div>
+      {showControls && !showSettings && (
+        <div className="absolute top-6 left-20 z-30">
+          <h2 className="text-white text-xl font-semibold">{title}</h2>
+          {episodeInfo && (
+            <p className="text-white/80 text-sm mt-1">{episodeInfo}</p>
+          )}
+        </div>
+      )}
 
       {/* Quality Display - Top Right */}
-      {displayQuality && (
-        <div
-          className={`absolute top-6 right-6 z-30 px-3 py-1.5 bg-black/70 rounded text-white text-sm font-semibold transition-opacity ${
-            showControls && !showSettings ? 'opacity-100' : 'opacity-0'
-          }`}
-        >
+      {displayQuality && showControls && !showSettings && (
+        <div className="absolute top-6 right-6 z-30 px-3 py-1.5 bg-black/70 rounded text-white text-sm font-semibold">
           {displayQuality}
         </div>
       )}
