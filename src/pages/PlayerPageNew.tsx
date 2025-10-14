@@ -357,9 +357,23 @@ export function PlayerPageNew({
           }
 
           // normalize filesize
-          const sizeNumeric =
+          let sizeNumeric =
             s.filesizeBytes || s.fileSizeBytes || s.sizeBytes || s.bytes || s.fileBytes ||
             (typeof s.size === 'number' ? s.size : undefined);
+          
+          // Extract file size from title if not available (e.g., "63.16 GB" or "2.5GB")
+          if (!sizeNumeric && s.title) {
+            const sizeMatch = s.title.match(/(\d+(?:\.\d+)?)\s*(GB|MB|TB)/i);
+            if (sizeMatch) {
+              const value = parseFloat(sizeMatch[1]);
+              const unit = sizeMatch[2].toUpperCase();
+              if (unit === 'GB') sizeNumeric = value * 1024 * 1024 * 1024;
+              else if (unit === 'MB') sizeNumeric = value * 1024 * 1024;
+              else if (unit === 'TB') sizeNumeric = value * 1024 * 1024 * 1024 * 1024;
+              console.log('[PlayerPage] Extracted size from title:', s.title.substring(0, 60), '→', value, unit, '=', sizeNumeric, 'bytes');
+            }
+          }
+          
           return {
             ...s,
             kind,
@@ -389,6 +403,13 @@ export function PlayerPageNew({
         } catch {}
         
         setStreams(enriched);
+        
+        // Log stream sizes for debugging
+        console.log('[PlayerPage] Stream sizes:', enriched.map((s: any) => ({
+          title: s.title?.substring(0, 50),
+          filesizeBytes: s.filesizeBytes,
+          sizeGB: s.filesizeBytes ? (s.filesizeBytes / 1024 / 1024 / 1024).toFixed(2) + ' GB' : 'NO SIZE'
+        })));
         
         const caps = await getDeviceCapabilities();
         console.log('[PlayerPage] Device capabilities:', caps);
