@@ -50,7 +50,37 @@ export function PlayerPageNew({
   const [classifiedStreams, setClassifiedStreams] = useState<StreamWithClassification[]>([]);
   const [currentStream, setCurrentStream] = useState<NormalizedStream | null>(null);
   const [showIncompatibleSheet, setShowIncompatibleSheet] = useState(false);
+  const [subtitleOffset, setSubtitleOffset] = useState<number>(0); // Auto-sync offset in seconds
+  const [displayQuality, setDisplayQuality] = useState<string>(''); // Display quality (e.g., "4K", "1080p")
+  const [episodeInfo, setEpisodeInfo] = useState<string>(''); // Episode number and title
   const [loading, setLoading] = useState(true);
+  
+  // Set episode info when component mounts or episode changes
+  useEffect(() => {
+    if (contentType === 'series' && seasonNumber && episodeNumber) {
+      // We'll fetch episode title from TMDB API
+      const fetchEpisodeTitle = async () => {
+        try {
+          const tmdbId = contentId.replace('tmdb:', '');
+          const apiKey = import.meta.env.VITE_TMDB_API_KEY || '080380c1ad7b3967af3def25159e4374';
+          const url = `https://api.themoviedb.org/3/tv/${tmdbId}/season/${seasonNumber}/episode/${episodeNumber}?api_key=${apiKey}`;
+          const response = await fetch(url);
+          if (response.ok) {
+            const data = await response.json();
+            const episodeTitle = data.name || '';
+            setEpisodeInfo(`S${seasonNumber}E${episodeNumber}${episodeTitle ? ` • ${episodeTitle}` : ''}`);
+          } else {
+            setEpisodeInfo(`S${seasonNumber}E${episodeNumber}`);
+          }
+        } catch (e) {
+          setEpisodeInfo(`S${seasonNumber}E${episodeNumber}`);
+        }
+      };
+      fetchEpisodeTitle();
+    } else {
+      setEpisodeInfo('');
+    }
+  }, [contentId, contentType, seasonNumber, episodeNumber]);
   const [error, setError] = useState<string | null>(null);
   const [showControls, setShowControls] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
@@ -431,6 +461,20 @@ export function PlayerPageNew({
           
           const details = [quality + 'p', container, size, seeds].filter(Boolean).join(' • ');
           setSourceDetails(details || 'Unknown Source');
+          
+          // Set display quality for top-right corner
+          const qualityNum = typeof quality === 'number' ? quality : parseInt(String(quality)) || 0;
+          if (qualityNum >= 2160) {
+            setDisplayQuality('4K');
+          } else if (qualityNum >= 1080) {
+            setDisplayQuality('1080p');
+          } else if (qualityNum >= 720) {
+            setDisplayQuality('720p');
+          } else if (qualityNum > 0) {
+            setDisplayQuality(qualityNum + 'p');
+          } else {
+            setDisplayQuality('HD');
+          }
         } else if (response.items.length > 0) {
           console.log('[PlayerPage] Fallback to first stream');
           setCurrentStream(response.items[0]);
@@ -542,6 +586,26 @@ export function PlayerPageNew({
           console.log('[PlayerPage] ✅ Enabled FIRST subtitle track:', track.label, 'ID:', trackId);
 
           track.addEventListener('cuechange', () => {
+            // Apply subtitle offset for auto-sync
+            const video = videoRef.current;
+            if (!video) return;
+            
+            // Adjust cue timing based on offset
+            if (subtitleOffset !== 0 && track.cues) {
+              for (let i = 0; i < track.cues.length; i++) {
+                const cue = track.cues[i] as VTTCue;
+                if (cue && !cue.hasOwnProperty('_offsetApplied')) {
+                  // Mark as adjusted to avoid re-applying
+                  Object.defineProperty(cue, '_offsetApplied', { value: true, writable: false });
+                  // Apply offset
+                  const origStart = cue.startTime;
+                  const origEnd = cue.endTime;
+                  cue.startTime = Math.max(0, origStart + subtitleOffset);
+                  cue.endTime = Math.max(0, origEnd + subtitleOffset);
+                }
+              }
+            }
+            
             // Mirror to overlay to guarantee position
             const cues = [] as string[];
             for (let c = 0; c < (track.activeCues?.length || 0); c++) {
@@ -897,6 +961,29 @@ export function PlayerPageNew({
       >
         <ArrowLeft className="w-6 h-6" />
       </button>
+
+      {/* Title and Episode Info Overlay - Top Left */}
+      <div
+        className={`absolute top-6 left-20 z-30 transition-opacity ${
+          showControls ? 'opacity-100' : 'opacity-0'
+        }`}
+      >
+        <h2 className="text-white text-xl font-semibold drop-shadow-lg">{title}</h2>
+        {episodeInfo && (
+          <p className="text-white/80 text-sm mt-1 drop-shadow-lg">{episodeInfo}</p>
+        )}
+      </div>
+
+      {/* Quality Display - Top Right */}
+      {displayQuality && (
+        <div
+          className={`absolute top-6 right-6 z-30 px-3 py-1.5 bg-black/70 rounded text-white text-sm font-semibold transition-opacity ${
+            showControls ? 'opacity-100' : 'opacity-0'
+          }`}
+        >
+          {displayQuality}
+        </div>
+      )}
 
       {currentStream && (
         <>
