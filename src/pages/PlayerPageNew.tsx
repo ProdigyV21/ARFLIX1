@@ -183,15 +183,28 @@ export function PlayerPageNew({
         }
 
         // ATTACH SUBTITLES HERE - after we confirmed this is a stable, full-duration video
-        console.log('[PlayerPage] ✨ Final stream loaded successfully, attaching subtitles...');
-        if (subtitles.length > 0) {
-          // Small delay to ensure video is fully ready
-          setTimeout(() => {
-            addSubtitleTracks();
-          }, 300);
-        } else {
-          console.log('[PlayerPage] No subtitles available to attach');
-        }
+        console.log('[PlayerPage] ✨ Final stream loaded successfully, loading & attaching subtitles...');
+        setTimeout(async () => {
+          try {
+            // Fetch subtitles inline if not already loaded
+            let subs = subtitles;
+            if (subs.length === 0) {
+              console.log('[PlayerPage] Fetching subtitles inline for final stream...');
+              subs = await fetchSubtitlesWithCache(contentId, contentType, seasonNumber, episodeNumber);
+              if (subs && subs.length > 0) {
+                setSubtitles(subs);
+                console.log('[PlayerPage] ✅ Fetched', subs.length, 'subtitles inline');
+              }
+            }
+            if (subs && subs.length > 0) {
+              addSubtitleTracks();
+            } else {
+              console.log('[PlayerPage] No subtitles available to attach');
+            }
+          } catch (e) {
+            console.error('[PlayerPage] Error fetching subtitles:', e);
+          }
+        }, 500);
 
         // Detect audio tracks from media engine
         if (engineRef.current) {
