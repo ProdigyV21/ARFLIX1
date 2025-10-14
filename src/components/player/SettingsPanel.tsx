@@ -166,7 +166,7 @@ export function SettingsPanel({
                         }`}
                       >
                           <div className="flex-1 min-w-0">
-                            <div className="font-medium truncate">{stream.label}</div>
+                            <div className="font-medium truncate">{stream.label || `${stream.quality || ''} ${stream.codec || ''}`.trim()}</div>
 
                             {/* Line 1 */}
                             <div className="flex flex-wrap gap-1.5 mt-2">
@@ -190,6 +190,18 @@ export function SettingsPanel({
                                   {stream.hdr === 'dolby_vision' ? 'Dolby Vision' : 'HDR10'}
                                 </span>
                               )}
+                              {/* container */}
+                              {stream.kind && (
+                                <span className="text-xs px-2 py-0.5 rounded bg-neutral-700 text-gray-300">
+                                  {String(stream.kind).toUpperCase()}
+                                </span>
+                              )}
+                              {/* seeds */}
+                              {((stream as any).seeds !== undefined) && (
+                                <span className="text-xs px-2 py-0.5 rounded bg-neutral-700 text-gray-300">
+                                  {(stream as any).seeds} seeds
+                                </span>
+                              )}
                             </div>
 
                             {/* Line 2 */}
@@ -201,7 +213,11 @@ export function SettingsPanel({
                                 </span>
                               )}
                               {stream.sourceType && <span>{stream.sourceType}</span>}
-                              {stream.kind && <span>{String(stream.kind).toUpperCase()}</span>}
+                              {Boolean((stream as any).filesizeBytes || (stream as any).fileSizeBytes || (stream as any).sizeBytes || (stream as any).bytes || (stream as any).size) && (
+                                <span>
+                                  {formatSize((stream as any).filesizeBytes || (stream as any).fileSizeBytes || (stream as any).sizeBytes || (stream as any).bytes || (stream as any).size)}
+                                </span>
+                              )}
                             </div>
                           </div>
                         {stream.url === currentStream.url && <Check className="w-5 h-5 flex-shrink-0" />}
