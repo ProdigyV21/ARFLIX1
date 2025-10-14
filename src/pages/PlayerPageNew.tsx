@@ -112,6 +112,8 @@ export function PlayerPageNew({
 
     const video = videoRef.current;
     console.log('[PlayerPage] Initializing player with stream:', { url: stream.url, kind: stream.kind, quality: stream.quality });
+    console.log('[PlayerPage] Video element:', video);
+    console.log('[PlayerPage] Video src before attach:', video.src);
 
     // Check if this is a Torrentio "downloading" placeholder
     if (stream.url.includes('torrentio.strem.fun') && stream.url.includes('/videos/downloading')) {
@@ -153,6 +155,9 @@ export function PlayerPageNew({
           });
         }
       );
+
+      console.log('[PlayerPage] Video src after attach:', video.src);
+      console.log('[PlayerPage] Engine attached:', engine);
 
       video.addEventListener('loadedmetadata', () => {
         const dur = video.duration;
@@ -1095,9 +1100,9 @@ export function PlayerPageNew({
           showControls && !showSettings ? 'opacity-100' : 'opacity-0'
         }`}
       >
-        <h2 className="text-white text-xl font-semibold drop-shadow-lg">{title}</h2>
+        <h2 className="text-white text-xl font-semibold">{title}</h2>
         {episodeInfo && (
-          <p className="text-white/80 text-sm mt-1 drop-shadow-lg">{episodeInfo}</p>
+          <p className="text-white/80 text-sm mt-1">{episodeInfo}</p>
         )}
       </div>
 
