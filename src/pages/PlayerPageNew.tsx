@@ -53,6 +53,9 @@ export function PlayerPageNew({
   const [subtitleOffset, setSubtitleOffset] = useState<number>(0); // Auto-sync offset in seconds
   const [displayQuality, setDisplayQuality] = useState<string>(''); // Display quality (e.g., "4K", "1080p")
   const [episodeInfo, setEpisodeInfo] = useState<string>(''); // Episode number and title
+  const [isAutoSyncing, setIsAutoSyncing] = useState<boolean>(false);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
   const [loading, setLoading] = useState(true);
   
   // Set episode info when component mounts or episode changes
@@ -492,6 +495,134 @@ export function PlayerPageNew({
     loadStreams();
   }, [contentId, contentType, seasonNumber, episodeNumber]);
 
+  // Auto-sync subtitles with audio analysis
+  function autoSyncSubtitles() {
+    const video = videoRef.current;
+    if (!video || !video.textTracks || video.textTracks.length === 0) return;
+
+    console.log('[PlayerPage] 🔄 Starting automatic subtitle sync...');
+    setIsAutoSyncing(true);
+
+    // Create audio context for speech detection
+    if (!audioContextRef.current) {
+      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
+      audioContextRef.current = new AudioContext();
+      
+      const source = audioContextRef.current.createMediaElementSource(video);
+      const analyser = audioContextRef.current.createAnalyser();
+      analyser.fftSize = 2048;
+      source.connect(analyser);
+      analyser.connect(audioContextRef.current.destination);
+      analyserRef.current = analyser;
+    }
+
+    // Analyze audio volume peaks to detect speech
+    const analyser = analyserRef.current;
+    if (!analyser) return;
+
+    const dataArray = new Uint8Array(analyser.frequencyBinCount);
+    const speechThreshold = 30; // Minimum volume to consider as speech
+    const samples: { time: number; volume: number }[] = [];
+    
+    // Sample audio for 10 seconds to find speech pattern
+    const sampleDuration = 10000; // 10 seconds
+    const sampleInterval = 100; // Sample every 100ms
+    let sampleCount = 0;
+    const maxSamples = sampleDuration / sampleInterval;
+
+    const samplingInterval = setInterval(() => {
+      if (video.paused || sampleCount >= maxSamples) {
+        clearInterval(samplingInterval);
+        
+        // Find speech peaks
+        const speechPeaks = samples.filter(s => s.volume > speechThreshold);
+        
+        if (speechPeaks.length > 0) {
+          // Get first speech moment
+          const firstSpeech = speechPeaks[0].time;
+          
+          // Find first subtitle appearance time
+          const activeTrack = Array.from(video.textTracks).find(t => t.mode === 'showing');
+          if (activeTrack && activeTrack.cues && activeTrack.cues.length > 0) {
+            const firstCue = activeTrack.cues[0] as VTTCue;
+            const firstSubTime = firstCue.startTime;
+            
+            // Calculate offset: if subtitle appears before speech, delay it
+            const calculatedOffset = firstSpeech - firstSubTime;
+            
+            // Only apply if offset is significant (> 0.5s)
+            if (Math.abs(calculatedOffset) > 0.5) {
+              setSubtitleOffset(calculatedOffset);
+              console.log('[PlayerPage] ✅ Auto-sync complete! Applied offset:', calculatedOffset.toFixed(2), 'seconds');
+              console.log('[PlayerPage] First speech at:', firstSpeech.toFixed(2), 's, First subtitle at:', firstSubTime.toFixed(2), 's');
+            } else {
+              console.log('[PlayerPage] ✅ Subtitles already in sync (offset < 0.5s)');
+            }
+          }
+        } else {
+          console.log('[PlayerPage] ⚠️ No speech detected in sample period');
+        }
+        
+        setIsAutoSyncing(false);
+        return;
+      }
+
+      analyser.getByteFrequencyData(dataArray);
+      const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+      samples.push({ time: video.currentTime, volume: average });
+      sampleCount++;
+    }, sampleInterval);
+  }
+
+  // Trigger auto-sync when subtitles are loaded and video starts playing
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || subtitles.length === 0) return;
+
+    const handleCanPlay = () => {
+      // Wait for video to actually start playing
+      if (video.currentTime > 0.5 && !isAutoSyncing && subtitleOffset === 0) {
+        // Start auto-sync after 2 seconds of playback
+        setTimeout(() => {
+          if (!video.paused && video.currentTime > 2) {
+            autoSyncSubtitles();
+          }
+        }, 2000);
+      }
+    };
+
+    video.addEventListener('playing', handleCanPlay);
+    return () => video.removeEventListener('playing', handleCanPlay);
+  }, [subtitles, isAutoSyncing, subtitleOffset]);
+
+  // Continuously update subtitle overlay based on offset
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || !currentTextTrack) return;
+
+    const updateOverlay = () => {
+      const activeTrack = Array.from(video.textTracks).find(t => t.mode === 'showing');
+      if (!activeTrack || !activeTrack.cues) return;
+
+      const currentVideoTime = video.currentTime;
+      const adjustedTime = currentVideoTime - subtitleOffset;
+      const cues = [] as string[];
+
+      for (let i = 0; i < activeTrack.cues.length; i++) {
+        const cue = activeTrack.cues[i] as VTTCue;
+        if (cue && adjustedTime >= cue.startTime && adjustedTime <= cue.endTime) {
+          if (cue.text) cues.push(cue.text);
+        }
+      }
+
+      setOverlayLines(cues);
+    };
+
+    // Update overlay every 100ms while playing
+    const interval = setInterval(updateOverlay, 100);
+    return () => clearInterval(interval);
+  }, [currentTextTrack, subtitleOffset]);
+
   // Add subtitle tracks to video element
   function addSubtitleTracks() {
     const video = videoRef.current;
@@ -586,34 +717,30 @@ export function PlayerPageNew({
           console.log('[PlayerPage] ✅ Enabled FIRST subtitle track:', track.label, 'ID:', trackId);
 
           track.addEventListener('cuechange', () => {
-            // Apply subtitle offset for auto-sync
+            // Mirror to overlay with offset applied
             const video = videoRef.current;
             if (!video) return;
             
-            // Adjust cue timing based on offset
-            if (subtitleOffset !== 0 && track.cues) {
+            // Get active cues considering the offset
+            const currentVideoTime = video.currentTime;
+            const adjustedTime = currentVideoTime - subtitleOffset; // Reverse offset for lookup
+            
+            const cues = [] as string[];
+            
+            if (track.cues) {
               for (let i = 0; i < track.cues.length; i++) {
                 const cue = track.cues[i] as VTTCue;
-                if (cue && !cue.hasOwnProperty('_offsetApplied')) {
-                  // Mark as adjusted to avoid re-applying
-                  Object.defineProperty(cue, '_offsetApplied', { value: true, writable: false });
-                  // Apply offset
-                  const origStart = cue.startTime;
-                  const origEnd = cue.endTime;
-                  cue.startTime = Math.max(0, origStart + subtitleOffset);
-                  cue.endTime = Math.max(0, origEnd + subtitleOffset);
+                // Check if this cue should be active at the adjusted time
+                if (cue && adjustedTime >= cue.startTime && adjustedTime <= cue.endTime) {
+                  if (cue.text) cues.push(cue.text);
                 }
               }
             }
             
-            // Mirror to overlay to guarantee position
-            const cues = [] as string[];
-            for (let c = 0; c < (track.activeCues?.length || 0); c++) {
-              const cue: any = track.activeCues?.[c];
-              if (cue?.text) cues.push(cue.text);
-            }
             setOverlayLines(cues);
-            console.log('[PlayerPage] 🎬 Cue change detected, overlay lines:', cues.length);
+            if (cues.length > 0) {
+              console.log('[PlayerPage] 🎬 Cue active (offset:', subtitleOffset.toFixed(2), 's):', cues[0].substring(0, 50));
+            }
           });
         } else {
           track.mode = 'disabled';
