@@ -71,6 +71,7 @@ export function PlayerPageNew({
   const [sourceDetails, setSourceDetails] = useState<string>('');
   const [resumeTime, setResumeTime] = useState<number | null>(null);
   const [showResumePrompt, setShowResumePrompt] = useState(false);
+  const [overlayLines, setOverlayLines] = useState<string[]>([]);
 
   // Initialize player with stream
   const initializePlayer = useCallback(async (stream: NormalizedStream, startTime?: number) => {
@@ -281,7 +282,7 @@ export function PlayerPageNew({
         }
         
         // Enrich streams with additional info if available
-        const enriched = response.items.map((s: any) => {
+        let enriched = response.items.map((s: any) => {
           // determine kind if missing
           let kind: 'hls' | 'dash' | 'mp4' | 'unknown' = s.kind || 'unknown';
           if (!kind && s.url) {
@@ -306,6 +307,22 @@ export function PlayerPageNew({
             sourceType: s.sourceType || (s.infoHash ? 'torrent' : (s.url?.startsWith('http') ? 'http' : 'unknown')),
           };
         });
+
+        // Probe sizes via proxy HEAD for top candidates missing size
+        try {
+          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+          const candidates = enriched.filter((s: any) => !s.filesizeBytes).slice(0, 12);
+          const probed = await Promise.all(candidates.map(async (s: any) => {
+            try {
+              const headUrl = `${supabaseUrl}/functions/v1/proxy-video?url=${encodeURIComponent(s.url)}&head=1`;
+              const resp = await fetch(headUrl, { method: 'GET' });
+              const len = resp.headers.get('content-length');
+              if (len) s.filesizeBytes = parseInt(len, 10);
+            } catch {}
+            return s;
+          }));
+          // merge back updated objects (same references updated already)
+        } catch {}
         
         setStreams(enriched);
         
@@ -313,7 +330,7 @@ export function PlayerPageNew({
         console.log('[PlayerPage] Device capabilities:', caps);
         
         const playableSource = selectPlayableSource(
-          response.items.map((s: any) => {
+          enriched.map((s: any) => {
             // Determine kind from URL if not provided
             let kind: 'hls' | 'dash' | 'mp4' | 'unknown' = 'unknown';
             if (s.kind) {
@@ -334,7 +351,7 @@ export function PlayerPageNew({
               title: s.title || 'Unknown',
               quality: s.quality,
               kind,
-              sizeBytes: s.filesizeBytes || s.fileSizeBytes || s.sizeBytes || s.bytes || s.size
+              sizeBytes: (s as any).filesizeBytes || (s as any).fileSizeBytes || (s as any).sizeBytes || (s as any).bytes || (s as any).size
             };
           }),
           caps
@@ -383,8 +400,8 @@ export function PlayerPageNew({
           // Build better source details
           const quality = matchingStream.quality || playableSource.classification?.quality || 'Unknown';
           const container = playableSource.classification?.container?.toUpperCase() || 'Unknown';
-          const size = matchingStream.filesizeBytes 
-            ? `${(matchingStream.filesizeBytes / 1024 / 1024 / 1024).toFixed(2)} GB`
+          const size = (matchingStream as any).filesizeBytes 
+            ? `${((matchingStream as any).filesizeBytes / 1024 / 1024 / 1024).toFixed(2)} GB`
             : '';
           const seeds = matchingStream.seeds ? `🌱 ${matchingStream.seeds}` : '';
           
@@ -500,7 +517,13 @@ export function PlayerPageNew({
           console.log('[PlayerPage] ✅ Enabled FIRST subtitle track:', track.label, 'ID:', trackId);
 
           track.addEventListener('cuechange', () => {
-            console.log('[PlayerPage] Cue changed, active cues:', track.activeCues?.length);
+            // Mirror to overlay to guarantee position
+            const cues = [] as string[];
+            for (let c = 0; c < (track.activeCues?.length || 0); c++) {
+              const cue: any = track.activeCues?.[c];
+              if (cue?.text) cues.push(cue.text);
+            }
+            setOverlayLines(cues);
           });
         } else {
           track.mode = 'hidden';
@@ -792,6 +815,15 @@ export function PlayerPageNew({
           }
         }}
       />
+
+      {/* Fallback DOM overlay for subtitles (ensures position above controls) */}
+      {overlayLines.length > 0 && (
+        <div className="player subs">
+          {overlayLines.map((line, i) => (
+            <div key={i} className="line">{line}</div>
+          ))}
+        </div>
+      )}
 
       {/* Loading Screen */}
       <PlayerLoadingScreen
