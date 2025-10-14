@@ -158,6 +158,8 @@ export function PlayerPageNew({
 
       console.log('[PlayerPage] Video src after attach:', video.src);
       console.log('[PlayerPage] Engine attached:', engine);
+      console.log('[PlayerPage] Video readyState:', video.readyState);
+      console.log('[PlayerPage] Video networkState:', video.networkState);
 
       video.addEventListener('loadedmetadata', () => {
         const dur = video.duration;
@@ -265,7 +267,7 @@ export function PlayerPageNew({
       setError(err.message || 'Failed to initialize player');
       setLoading(false);
     }
-  }, [streams, attach, contentType, engineRef]);
+  }, [streams, attach, contentType]);
 
   // Initialize player when stream is selected
   useEffect(() => {
