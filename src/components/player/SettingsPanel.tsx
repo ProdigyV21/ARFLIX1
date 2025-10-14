@@ -180,9 +180,9 @@ export function SettingsPanel({
                                   {String(stream.codec).toUpperCase()}
                                 </span>
                               )}
-                              {Boolean((stream as any).filesizeBytes) && (
+                              {Boolean((stream as any).filesizeBytes || (stream as any).fileSizeBytes || (stream as any).sizeBytes || (stream as any).bytes || (stream as any).size) && (
                                 <span className="text-xs px-2 py-0.5 rounded bg-neutral-700 text-gray-300">
-                                  {formatSize((stream as any).filesizeBytes)}
+                                  {formatSize((stream as any).filesizeBytes || (stream as any).fileSizeBytes || (stream as any).sizeBytes || (stream as any).bytes || (stream as any).size)}
                                 </span>
                               )}
                               {stream.hdr && stream.hdr !== 'none' && (
@@ -201,6 +201,7 @@ export function SettingsPanel({
                                 </span>
                               )}
                               {stream.sourceType && <span>{stream.sourceType}</span>}
+                              {stream.kind && <span>{String(stream.kind).toUpperCase()}</span>}
                             </div>
                           </div>
                         {stream.url === currentStream.url && <Check className="w-5 h-5 flex-shrink-0" />}

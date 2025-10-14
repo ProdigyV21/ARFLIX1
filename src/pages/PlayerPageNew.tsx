@@ -333,7 +333,8 @@ export function PlayerPageNew({
               url: s.url,
               title: s.title || 'Unknown',
               quality: s.quality,
-              kind
+              kind,
+              sizeBytes: s.filesizeBytes || s.fileSizeBytes || s.sizeBytes || s.bytes || s.size
             };
           }),
           caps

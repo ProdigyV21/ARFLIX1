@@ -294,7 +294,7 @@ export async function classifyStreamWithContentType(
 }
 
 export function selectPlayableSource(
-  streams: Array<{ url: string; title: string; quality?: string; kind: 'hls' | 'dash' | 'mp4' | 'unknown' }>,
+  streams: Array<{ url: string; title: string; quality?: string; kind: 'hls' | 'dash' | 'mp4' | 'unknown'; sizeBytes?: number }>,
   caps: DeviceCapabilities
 ): StreamWithClassification | null {
   const classified = streams.map(stream => ({
@@ -377,8 +377,12 @@ export function selectPlayableSource(
   // Use English candidates if available, otherwise fall back to all candidates
   const finalCandidates = englishCandidates.length > 0 ? englishCandidates : candidates;
 
-  // Sort by score primarily, then prefer higher resolution by height in title if tied
+  // Sort by size first (bigger is better), then by score, then by resolution height in title
   finalCandidates.sort((a, b) => {
+    const sizeA = (a as any).sizeBytes || 0;
+    const sizeB = (b as any).sizeBytes || 0;
+    const bySize = sizeB - sizeA;
+    if (bySize !== 0) return bySize;
     const byScore = b.classification.score - a.classification.score;
     if (byScore !== 0) return byScore;
     const height = (t?: string) => {
