@@ -1096,16 +1096,6 @@ export function PlayerPageNew({
         <ArrowLeft className="w-6 h-6" />
       </button>
 
-      {/* Title and Episode Info Overlay - Top Left */}
-      {showControls && !showSettings && (
-        <div className="absolute top-6 left-20 z-30">
-          <h2 className="text-white text-xl font-semibold">{title}</h2>
-          {episodeInfo && (
-            <p className="text-white/80 text-sm mt-1">{episodeInfo}</p>
-          )}
-        </div>
-      )}
-
       {/* Quality Display - Top Right */}
       {displayQuality && showControls && !showSettings && (
         <div className="absolute top-6 right-6 z-30 px-3 py-1.5 bg-black/70 rounded text-white text-sm font-semibold">
@@ -1126,7 +1116,7 @@ export function PlayerPageNew({
             currentQualityLabel={currentStream.quality || 'Unknown'}
             sourceDetails={sourceDetails}
             title={title}
-            subtitle=""
+            subtitle={episodeInfo}
             visible={showControls && !showSettings}
             onPlayPause={isPlaying ? handlePause : handlePlay}
             onSeek={handleSeek}
