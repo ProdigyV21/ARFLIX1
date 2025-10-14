@@ -182,6 +182,17 @@ export function PlayerPageNew({
           }
         }
 
+        // ATTACH SUBTITLES HERE - after we confirmed this is a stable, full-duration video
+        console.log('[PlayerPage] ✨ Final stream loaded successfully, attaching subtitles...');
+        if (subtitles.length > 0) {
+          // Small delay to ensure video is fully ready
+          setTimeout(() => {
+            addSubtitleTracks();
+          }, 300);
+        } else {
+          console.log('[PlayerPage] No subtitles available to attach');
+        }
+
         // Detect audio tracks from media engine
         if (engineRef.current) {
           const tracks = getAudioTracks(engineRef.current);
@@ -579,12 +590,9 @@ export function PlayerPageNew({
     loadSubtitles();
   }, [currentStream, contentId, contentType, seasonNumber, episodeNumber]);
 
-  // Add subtitles when they are loaded
-  useEffect(() => {
-    if (subtitles.length > 0) {
-      addSubtitleTracks();
-    }
-  }, [subtitles, preferredSubtitleLang]);
+  // NOTE: Subtitles are now attached directly in the loadedmetadata handler
+  // after the final stream is confirmed to be stable (not a short uncached video)
+  // This ensures subtitles are only added once to the correct video element
 
   // Load user preferences
   useEffect(() => {
