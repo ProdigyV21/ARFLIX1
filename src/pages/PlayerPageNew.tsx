@@ -501,25 +501,24 @@ export function PlayerPageNew({
           console.log('[PlayerPage] Stream has embedded subtitles:', currentStream.subtitles);
           // Handle embedded subtitles
         } else {
-          console.log('[PlayerPage] No stream subtitles, fetching from backend...');
+          console.log('[PlayerPage] No stream subtitles, fetching from built-in addons...');
           
-          // Fetch subtitles from backend
-          const subtitleResponse = await fetchSubtitlesWithCache(
+          // Fetch subtitles from built-in addons (OpenSubtitles v3 & Subscene)
+          const fetchedSubtitles = await fetchSubtitlesWithCache(
             contentId,
             contentType,
             seasonNumber,
             episodeNumber
           );
           
-          console.log('[PlayerPage] Subtitle response status:', subtitleResponse.status);
-          console.log('[PlayerPage] Subtitle response data:', subtitleResponse.data);
+          console.log('[PlayerPage] Fetched subtitles:', fetchedSubtitles);
           
-          if (subtitleResponse.data && subtitleResponse.data.length > 0) {
-            setSubtitles(subtitleResponse.data);
-            console.log('[PlayerPage] Fetched', subtitleResponse.data.length, 'subtitles from backend');
-            console.log('[PlayerPage] Subtitle details:', subtitleResponse.data);
+          if (fetchedSubtitles && fetchedSubtitles.length > 0) {
+            setSubtitles(fetchedSubtitles);
+            console.log('[PlayerPage] ✅ Loaded', fetchedSubtitles.length, 'English subtitles');
+            console.log('[PlayerPage] Subtitle details:', fetchedSubtitles);
           } else {
-            console.log('[PlayerPage] ⚠️ No subtitles in response');
+            console.log('[PlayerPage] ⚠️ No English subtitles available');
           }
         }
       } catch (err) {
