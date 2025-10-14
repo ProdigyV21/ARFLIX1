@@ -511,8 +511,8 @@ export function PlayerPageNew({
 
         // Enable ONLY the first subtitle that matches preferred language
         if (!foundPreferred && preferredSubtitleLang && track.language === preferredSubtitleLang) {
-          // keep native hidden, we render with DOM overlay
-          track.mode = 'hidden';
+          // Set to 'showing' so cuechange events fire, but we'll hide native rendering with CSS
+          track.mode = 'showing';
           setCurrentTextTrack(trackId || track.language);
           foundPreferred = true;
           console.log('[PlayerPage] ✅ Enabled FIRST subtitle track:', track.label, 'ID:', trackId);
@@ -525,9 +525,10 @@ export function PlayerPageNew({
               if (cue?.text) cues.push(cue.text);
             }
             setOverlayLines(cues);
+            console.log('[PlayerPage] 🎬 Cue change detected, overlay lines:', cues.length);
           });
         } else {
-          track.mode = 'hidden';
+          track.mode = 'disabled';
         }
       }
       

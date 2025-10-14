@@ -25,55 +25,25 @@
   --subs-bottom-margin: 4rem;
 }
 
-/* Native video text tracks - Netflix/Stremio style bottom positioning */
+/* Hide native video text tracks completely - we use custom DOM overlay instead */
 video::cue {
-  font-size: var(--subs-font-size) !important;
-  line-height: var(--subs-line-height) !important;
-  text-shadow: var(--subs-shadow) !important;
-  background: transparent !important;
-  color: white !important;
-  font-family: 'Inter Tight', Arial, sans-serif !important;
-  font-weight: 700 !important;
-  text-align: center !important;
-  max-width: 80% !important;
-  margin: 0 auto !important;
-  white-space: pre-line !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
 }
 
-/* WebKit specific subtitle positioning */
 video::-webkit-media-text-track-display {
-  text-align: center !important;
-  left: 50% !important;
-  transform: translateX(-50%) !important;
-  max-width: 80% !important;
-  margin: 0 auto !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
 }
 
 video::-webkit-media-text-track-container {
-  text-align: center !important;
-  left: 50% !important;
-  transform: translateX(-50%) !important;
-  max-width: 80% !important;
-  margin: 0 auto !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
 }
 
-/* Firefox specific subtitle positioning */
 video::-moz-media-text-track-display {
-  text-align: center !important;
-  left: 50% !important;
-  transform: translateX(-50%) !important;
-  max-width: 80% !important;
-  margin: 0 auto !important;
-}
-
-/* Global video subtitle container override */
-video {
-  --webkit-media-text-track-display: center;
-}
-
-/* Force center alignment for all subtitle elements */
-video * {
-  text-align: center !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
 }
 
 /* Player subtitle overlay - safe-area positioning */
