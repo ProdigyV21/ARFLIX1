@@ -1092,7 +1092,7 @@ export function PlayerPageNew({
       {/* Title and Episode Info Overlay - Top Left */}
       <div
         className={`absolute top-6 left-20 z-30 transition-opacity ${
-          showControls ? 'opacity-100' : 'opacity-0'
+          showControls && !showSettings ? 'opacity-100' : 'opacity-0'
         }`}
       >
         <h2 className="text-white text-xl font-semibold drop-shadow-lg">{title}</h2>
@@ -1105,7 +1105,7 @@ export function PlayerPageNew({
       {displayQuality && (
         <div
           className={`absolute top-6 right-6 z-30 px-3 py-1.5 bg-black/70 rounded text-white text-sm font-semibold transition-opacity ${
-            showControls ? 'opacity-100' : 'opacity-0'
+            showControls && !showSettings ? 'opacity-100' : 'opacity-0'
           }`}
         >
           {displayQuality}
