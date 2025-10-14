@@ -511,7 +511,8 @@ export function PlayerPageNew({
 
         // Enable ONLY the first subtitle that matches preferred language
         if (!foundPreferred && preferredSubtitleLang && track.language === preferredSubtitleLang) {
-          track.mode = 'showing';
+          // keep native hidden, we render with DOM overlay
+          track.mode = 'hidden';
           setCurrentTextTrack(trackId || track.language);
           foundPreferred = true;
           console.log('[PlayerPage] ✅ Enabled FIRST subtitle track:', track.label, 'ID:', trackId);
@@ -801,7 +802,7 @@ export function PlayerPageNew({
   }
 
   return (
-    <div ref={containerRef} className="relative h-screen bg-black overflow-hidden">
+    <div ref={containerRef} className="relative h-screen bg-black overflow-hidden player">
       <video
         ref={videoRef}
         className="w-full h-full object-contain"
@@ -818,7 +819,7 @@ export function PlayerPageNew({
 
       {/* Fallback DOM overlay for subtitles (ensures position above controls) */}
       {overlayLines.length > 0 && (
-        <div className="player subs">
+        <div className="subs">
           {overlayLines.map((line, i) => (
             <div key={i} className="line">{line}</div>
           ))}
