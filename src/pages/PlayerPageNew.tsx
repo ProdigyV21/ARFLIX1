@@ -345,6 +345,11 @@ export function PlayerPageNew({
           return;
         }
         
+        // Log first stream to understand structure
+        if (response.items && response.items.length > 0) {
+          console.log('[PlayerPage] 🔍 SAMPLE STREAM OBJECT:', response.items[0]);
+        }
+
         // Enrich streams with additional info if available
         let enriched = response.items.map((s: any) => {
           // determine kind if missing
@@ -356,21 +361,22 @@ export function PlayerPageNew({
             else if (url.includes('.mp4')) kind = 'mp4';
           }
 
-          // normalize filesize
+          // normalize filesize - check ALL possible fields
           let sizeNumeric =
             s.filesizeBytes || s.fileSizeBytes || s.sizeBytes || s.bytes || s.fileBytes ||
             (typeof s.size === 'number' ? s.size : undefined);
           
-          // Extract file size from title if not available (e.g., "63.16 GB" or "2.5GB")
-          if (!sizeNumeric && s.title) {
-            const sizeMatch = s.title.match(/(\d+(?:\.\d+)?)\s*(GB|MB|TB)/i);
+          // Extract file size from title/name if not available (e.g., "63.16 GB" or "2.5GB")
+          const textToSearch = s.title || s.name || s.label || '';
+          if (!sizeNumeric && textToSearch) {
+            const sizeMatch = textToSearch.match(/(\d+(?:\.\d+)?)\s*(GB|MB|TB)/i);
             if (sizeMatch) {
               const value = parseFloat(sizeMatch[1]);
               const unit = sizeMatch[2].toUpperCase();
               if (unit === 'GB') sizeNumeric = value * 1024 * 1024 * 1024;
               else if (unit === 'MB') sizeNumeric = value * 1024 * 1024;
               else if (unit === 'TB') sizeNumeric = value * 1024 * 1024 * 1024 * 1024;
-              console.log('[PlayerPage] ✅ Extracted size from title:', s.title.substring(0, 60), '→', value, unit, '=', sizeNumeric, 'bytes');
+              console.log('[PlayerPage] ✅ Extracted size:', value, unit, 'from:', textToSearch.substring(0, 80));
             }
           }
           
