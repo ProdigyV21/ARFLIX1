@@ -377,8 +377,16 @@ export function selectPlayableSource(
   // Use English candidates if available, otherwise fall back to all candidates
   const finalCandidates = englishCandidates.length > 0 ? englishCandidates : candidates;
 
-  // Sort by score (which includes quality, size, and codec bonuses)
-  finalCandidates.sort((a, b) => b.classification.score - a.classification.score);
+  // Sort by score primarily, then prefer higher resolution by height in title if tied
+  finalCandidates.sort((a, b) => {
+    const byScore = b.classification.score - a.classification.score;
+    if (byScore !== 0) return byScore;
+    const height = (t?: string) => {
+      const m = (t || '').match(/(2160|1080|720|480)p/i);
+      return m ? parseInt(m[1], 10) : 0;
+    };
+    return height(b.title) - height(a.title);
+  });
 
   console.log('[StreamClassifier] Top 5 candidates:', finalCandidates.slice(0, 5).map(c => ({
     title: c.title?.substring(0, 60),

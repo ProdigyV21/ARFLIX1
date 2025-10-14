@@ -141,13 +141,21 @@ export function PlayerPageNew({
 
         const qualities = getAvailableQualities(engine);
         if (qualities.length > 0) {
+          // expose available qualities
           setQualities(['auto', ...qualities]);
+
+          // prefer highest quality on start
+          const maxQuality = Math.max(...qualities);
+          try {
+            setQuality(engine, maxQuality);
+            setCurrentQuality(maxQuality);
+          } catch {
+            // ignore if engine doesn't allow switching now
+          }
         } else {
           setQualities([]);
+          setCurrentQuality(getCurrentQuality(engine));
         }
-
-        const current = getCurrentQuality(engine);
-        setCurrentQuality(current);
 
         console.log('[PlayerPage] === METADATA LOADED ===');
         console.log('[PlayerPage] Duration:', dur);
@@ -273,15 +281,31 @@ export function PlayerPageNew({
         }
         
         // Enrich streams with additional info if available
-        const enriched = response.items.map((s: any) => ({
-          ...s,
-          provider: s.provider || s.sourceName || s.host,
-          qualityLabel: s.qualityLabel || (s.quality ? `${s.quality}p` : undefined),
-          filesizeBytes: s.filesizeBytes || s.fileSizeBytes || s.sizeBytes,
-          seeds: s.seeds ?? s.seeders,
-          peers: s.peers,
-          sourceType: s.sourceType || (s.infoHash ? 'torrent' : (s.url?.startsWith('http') ? 'http' : 'unknown')),
-        }));
+        const enriched = response.items.map((s: any) => {
+          // determine kind if missing
+          let kind: 'hls' | 'dash' | 'mp4' | 'unknown' = s.kind || 'unknown';
+          if (!kind && s.url) {
+            const url = String(s.url).toLowerCase();
+            if (url.includes('.m3u8') || url.includes('hls')) kind = 'hls';
+            else if (url.includes('.mpd') || url.includes('dash')) kind = 'dash';
+            else if (url.includes('.mp4')) kind = 'mp4';
+          }
+
+          // normalize filesize
+          const sizeNumeric =
+            s.filesizeBytes || s.fileSizeBytes || s.sizeBytes || s.bytes || s.fileBytes ||
+            (typeof s.size === 'number' ? s.size : undefined);
+          return {
+            ...s,
+            kind,
+            provider: s.provider || s.sourceName || s.host,
+            qualityLabel: s.qualityLabel || (s.quality ? `${s.quality}p` : undefined),
+            filesizeBytes: sizeNumeric,
+            seeds: s.seeds ?? s.seeders,
+            peers: s.peers,
+            sourceType: s.sourceType || (s.infoHash ? 'torrent' : (s.url?.startsWith('http') ? 'http' : 'unknown')),
+          };
+        });
         
         setStreams(enriched);
         
@@ -856,16 +880,38 @@ export function PlayerPageNew({
             availableQualities={qualities}
             currentQuality={currentQuality}
             playbackSpeed={1.0}
-            subtitlesEnabled={false}
-            currentSubtitle=""
-            availableSubtitles={textTracks}
+            subtitlesEnabled={Boolean(currentTextTrack)}
+            currentSubtitle={currentTextTrack as any}
+            availableSubtitles={subtitles as any}
             availableAudioTracks={audioTracks}
             currentAudioTrack={currentAudioTrack?.id}
             onClose={() => setShowSettings(false)}
             onQualityChange={handleQualityChange}
             onStreamChange={() => {}}
             onSpeedChange={() => {}}
-            onSubtitleChange={handleTextTrackChange}
+            onSubtitleChange={(trackId?: string) => {
+              const video = videoRef.current;
+              if (!video) return;
+              // disable all
+              for (let i = 0; i < video.textTracks.length; i++) {
+                video.textTracks[i].mode = 'disabled';
+              }
+              if (!trackId) {
+                setCurrentTextTrack(undefined);
+                return;
+              }
+              // find matching element id
+              const trackEls = Array.from(video.querySelectorAll('track')) as HTMLTrackElement[];
+              const match = trackEls.find(t => t.id === trackId);
+              if (match) {
+                const index = trackEls.indexOf(match);
+                const target = video.textTracks[index];
+                if (target) {
+                  target.mode = 'showing';
+                  setCurrentTextTrack(trackId);
+                }
+              }
+            }}
             onAudioTrackChange={handleAudioTrackChange}
           />
         </>
