@@ -1,8 +1,10 @@
 import { tmdbBackdrop } from './tmdbImages';
+import { supabase } from './supabase';
+import { cachedFetch } from './cache';
 
-const TMDB_API_KEY = import.meta.env.TMDB_API_KEY || '080380c1ad7b3967af3def25159e4374';
-const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p';
+const USE_PROXY = true; // Set to false for local development if needed
+const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
 export interface TMDBMovie {
   id: number;
@@ -43,40 +45,75 @@ export interface HeroItem {
 }
 
 async function fetchTMDB(endpoint: string): Promise<any> {
-  const separator = endpoint.includes('?') ? '&' : '?';
-  const url = `${TMDB_BASE_URL}${endpoint}${separator}api_key=${TMDB_API_KEY}`;
+  if (USE_PROXY) {
+    // Use Supabase Edge Function proxy to protect API key
+    const { data, error } = await supabase.functions.invoke('tmdb-proxy', {
+      body: { endpoint }
+    });
 
-  const response = await fetch(url, {
-    headers: {
-      'Content-Type': 'application/json'
+    if (error) {
+      console.error('TMDB Proxy error:', error);
+      throw new Error(`TMDB Proxy error: ${error.message}`);
     }
-  });
 
-  if (!response.ok) {
-    throw new Error(`TMDB API error: ${response.statusText}`);
+    return data;
+  } else {
+    // Direct API call (fallback for local development)
+    const TMDB_API_KEY = import.meta.env.VITE_TMDB_API_KEY || '080380c1ad7b3967af3def25159e4374';
+    const TMDB_BASE_URL = 'https://api.themoviedb.org/3';
+    const separator = endpoint.includes('?') ? '&' : '?';
+    const url = `${TMDB_BASE_URL}${endpoint}${separator}api_key=${TMDB_API_KEY}`;
+
+    const response = await fetch(url, {
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`TMDB API error: ${response.statusText}`);
+    }
+
+    return response.json();
   }
-
-  return response.json();
 }
 
 export async function fetchTrendingMovies(): Promise<TMDBMovie[]> {
-  const data = await fetchTMDB('/trending/movie/week?language=en-US');
-  return data.results.slice(0, 10);
+  return cachedFetch(
+    'tmdb:trending:movies',
+    async () => {
+      const data = await fetchTMDB('/trending/movie/week?language=en-US');
+      return data.results.slice(0, 10);
+    },
+    CACHE_TTL
+  );
 }
 
 export async function fetchTrendingTV(): Promise<TMDBMovie[]> {
-  const data = await fetchTMDB('/trending/tv/week?language=en-US');
-  return data.results.slice(0, 10);
+  return cachedFetch(
+    'tmdb:trending:tv',
+    async () => {
+      const data = await fetchTMDB('/trending/tv/week?language=en-US');
+      return data.results.slice(0, 10);
+    },
+    CACHE_TTL
+  );
 }
 
 export async function fetchTopAnime(): Promise<TMDBMovie[]> {
-  try {
-    const data = await fetchTMDB('/discover/tv?with_keywords=210024&sort_by=popularity.desc&language=en-US&page=1');
-    return data.results.slice(0, 10);
-  } catch (error) {
-    console.error('Failed to fetch anime:', error);
-    return [];
-  }
+  return cachedFetch(
+    'tmdb:top:anime',
+    async () => {
+      try {
+        const data = await fetchTMDB('/discover/tv?with_keywords=210024&sort_by=popularity.desc&language=en-US&page=1');
+        return data.results.slice(0, 10);
+      } catch (error) {
+        console.error('Failed to fetch anime:', error);
+        return [];
+      }
+    },
+    CACHE_TTL
+  );
 }
 
 export async function fetchVideos(tmdbId: number, type: 'movie' | 'tv'): Promise<TMDBVideo[]> {
