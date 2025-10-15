@@ -185,18 +185,8 @@ function calculateCompatibilityScore(
     score += videoOk ? 50 : -500;
   }
 
-  // Container format preferences - HEAVILY prefer MKV for embedded subtitles
-  if (classification.container === 'mkv') {
-    score += 1000; // MASSIVE bonus for MKV (embedded subtitle support)
-    console.log('[StreamClassifier] 🎯 MKV container bonus: +1000 points');
-  } else if (classification.container === 'm3u8') {
-    score += 500; // HLS for subtitle support
-  } else if (classification.container === 'mp4') {
-    score += 15; // MP4 is playable but no embedded subs
-  }
-
-  // Resolution scoring - High priority but LESS than container preference
-  // We want MKV to win even if it's lower resolution
+  // Resolution scoring - HIGHEST priority for quality
+  // Quality should be prioritized over container format
   const resolutionValue = {
     '4K': 2160,
     '1080p': 1080,
@@ -204,11 +194,19 @@ function calculateCompatibilityScore(
     '480p': 480
   }[classification.resolution || ''] || 1080;
 
-  // Reduced multiplier from 20 to 5 so MKV bonus (1000) beats resolution difference
-  // A 1080p MKV gets: base + 1000 (mkv) + 540 (resolution) = 1540
-  // A 4K MP4 gets: base + 15 (mp4) + 1080 (resolution) = 1095
-  // So MKV wins!
-  score += (resolutionValue / 10) * 5;
+  // Higher multiplier: 4K gets 2160 points, 1080p gets 1080 points
+  // This ensures 4K is always preferred over lower resolutions
+  score += resolutionValue;
+
+  // Container format preferences - bonus for MKV but lower than quality difference
+  if (classification.container === 'mkv') {
+    score += 500; // MKV bonus for embedded subtitles (but 4K > 1080p still wins)
+    console.log('[StreamClassifier] 🎯 MKV container bonus: +500 points');
+  } else if (classification.container === 'm3u8') {
+    score += 400; // HLS for subtitle support
+  } else if (classification.container === 'mp4') {
+    score += 300; // MP4 is widely playable
+  }
 
   return score;
 }

@@ -440,7 +440,14 @@ export function PlayerPageNew({
         const streamsWithSize = enriched.filter((s: any) => s.filesizeBytes).length;
         console.log(`[PlayerPage] 📊 ${streamsWithSize}/${enriched.length} streams have file sizes`);
         
-        if (streamsWithSize < enriched.length * 0.3) {
+        // Skip size probing entirely if first 5 streams have no sizes
+        // This prevents 10+ second delays when addons don't provide file sizes
+        const firstFive = enriched.slice(0, 5);
+        const firstFiveWithSizes = firstFive.filter((s: any) => s.filesizeBytes).length;
+        
+        if (firstFiveWithSizes === 0) {
+          console.log('[PlayerPage] ⚡ Skipping size probing - no sizes in top streams, continuing without sizes');
+        } else if (streamsWithSize < enriched.length * 0.3) {
           // Less than 30% have sizes, probe top 5
           const probeStartTime = performance.now();
           try {
