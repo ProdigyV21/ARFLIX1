@@ -107,8 +107,23 @@ export const addonAPI = {
   },
 };
 
+// Stream cache to avoid refetching
+const streamCache = new Map<string, { data: any; timestamp: number }>();
+const STREAM_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+
 export async function fetchStreams(type: string, id: string, season?: number, episode?: number) {
   try {
+    // Create cache key
+    const cacheKey = `${type}:${id}:${season}:${episode}`;
+    
+    // Check cache first
+    const cached = streamCache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp) < STREAM_CACHE_TTL) {
+      console.log('[API] ⚡ Returning cached streams for:', cacheKey);
+      return cached.data;
+    }
+    
+    const startTime = performance.now();
     const headers = await getAuthHeaders();
     const params = new URLSearchParams();
     if (season !== undefined) params.set('season', season.toString());
@@ -118,7 +133,8 @@ export async function fetchStreams(type: string, id: string, season?: number, ep
     console.log('[API] Fetching streams:', { url, type, id, season, episode });
 
     const res = await fetch(url, { headers });
-    console.log('[API] Response status:', res.status, res.statusText);
+    const fetchTime = performance.now() - startTime;
+    console.log(`[API] ⏱️ Stream API response in ${fetchTime.toFixed(0)}ms - Status: ${res.status}`);
 
     if (!res.ok) {
       const error = await res.json().catch(() => ({ error: 'Failed to fetch streams' }));
@@ -127,7 +143,11 @@ export async function fetchStreams(type: string, id: string, season?: number, ep
     }
 
     const data = await res.json();
-    console.log('[API] Success response:', data);
+    console.log('[API] Success - received', data.items?.length || 0, 'streams');
+    
+    // Cache the result
+    streamCache.set(cacheKey, { data, timestamp: Date.now() });
+    
     return data;
   } catch (error) {
     console.error('[API] fetchStreams error:', error);

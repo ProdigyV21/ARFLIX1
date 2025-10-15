@@ -363,6 +363,22 @@ export function PlayerPageNew({
             else if (url.includes('.mp4')) kind = 'mp4';
           }
 
+          // Extract quality from various fields
+          let quality = s.quality || s.qualityLabel;
+          if (!quality && s.title) {
+            // Try to extract from title: "4K", "2160p", "1080p", etc.
+            const qualityMatch = s.title.match(/(\d{3,4})[pP]|4K|2K|8K/i);
+            if (qualityMatch) {
+              if (qualityMatch[0].toUpperCase().includes('K')) {
+                quality = qualityMatch[0].toUpperCase() === '4K' ? 2160 : 
+                         qualityMatch[0].toUpperCase() === '8K' ? 4320 : 
+                         qualityMatch[0].toUpperCase() === '2K' ? 1440 : undefined;
+              } else {
+                quality = parseInt(qualityMatch[1]);
+              }
+            }
+          }
+
           // normalize filesize - check ALL possible fields
           let sizeNumeric =
             s.filesizeBytes || s.fileSizeBytes || s.sizeBytes || s.bytes || s.fileBytes ||
@@ -398,8 +414,9 @@ export function PlayerPageNew({
           return {
             ...s,
             kind,
+            quality, // Use extracted quality
             provider: s.provider || s.sourceName || s.host,
-            qualityLabel: s.qualityLabel || (s.quality ? `${s.quality}p` : undefined),
+            qualityLabel: s.qualityLabel || (quality ? `${quality}p` : undefined),
             filesizeBytes: sizeNumeric,
             seeds: s.seeds ?? s.seeders,
             peers: s.peers,
@@ -409,28 +426,45 @@ export function PlayerPageNew({
         
         const enrichTime = performance.now() - enrichStartTime;
         console.log(`[PlayerPage] ⏱️ Streams enriched in ${enrichTime.toFixed(0)}ms`);
+        
+        // Log all stream qualities and sizes before sorting
+        console.log('[PlayerPage] 📋 ALL STREAMS (before sort):', enriched.map((s: any) => ({
+          title: s.title?.substring(0, 60),
+          quality: s.quality,
+          size: s.filesizeBytes ? (s.filesizeBytes / 1024 / 1024 / 1024).toFixed(2) + ' GB' : 'NO SIZE',
+          seeds: s.seeds || 0
+        })));
 
-        // Probe sizes via proxy HEAD for top candidates missing size (limit to top 8 for speed)
-        const probeStartTime = performance.now();
-        try {
-          const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-          const candidates = enriched.filter((s: any) => !s.filesizeBytes).slice(0, 8); // Reduced from 12 to 8
-          console.log(`[PlayerPage] 🔍 Probing ${candidates.length} streams for file sizes...`);
-          
-          await Promise.all(candidates.map(async (s: any) => {
-            try {
-              const headUrl = `${supabaseUrl}/functions/v1/proxy-video?url=${encodeURIComponent(s.url)}&head=1`;
-              const resp = await fetch(headUrl, { method: 'GET' });
-              const len = resp.headers.get('content-length');
-              if (len) s.filesizeBytes = parseInt(len, 10);
-            } catch {}
-            return s;
-          }));
-          // merge back updated objects (same references updated already)
-          const probeTime = performance.now() - probeStartTime;
-          console.log(`[PlayerPage] ⏱️ Size probing completed in ${probeTime.toFixed(0)}ms`);
-        } catch {
-          console.log('[PlayerPage] ⚠️ Size probing failed, continuing without sizes');
+        // Probe sizes via proxy HEAD for top candidates missing size (SKIP for speed - causes 10s delay)
+        // Only probe if very few streams have sizes
+        const streamsWithSize = enriched.filter((s: any) => s.filesizeBytes).length;
+        console.log(`[PlayerPage] 📊 ${streamsWithSize}/${enriched.length} streams have file sizes`);
+        
+        if (streamsWithSize < enriched.length * 0.3) {
+          // Less than 30% have sizes, probe top 5
+          const probeStartTime = performance.now();
+          try {
+            const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+            const candidates = enriched.filter((s: any) => !s.filesizeBytes).slice(0, 5);
+            console.log(`[PlayerPage] 🔍 Probing ${candidates.length} streams for file sizes...`);
+            
+            await Promise.all(candidates.map(async (s: any) => {
+              try {
+                const headUrl = `${supabaseUrl}/functions/v1/proxy-video?url=${encodeURIComponent(s.url)}&head=1`;
+                const resp = await fetch(headUrl, { method: 'GET' });
+                const len = resp.headers.get('content-length');
+                if (len) s.filesizeBytes = parseInt(len, 10);
+              } catch {}
+              return s;
+            }));
+            // merge back updated objects (same references updated already)
+            const probeTime = performance.now() - probeStartTime;
+            console.log(`[PlayerPage] ⏱️ Size probing completed in ${probeTime.toFixed(0)}ms`);
+          } catch {
+            console.log('[PlayerPage] ⚠️ Size probing failed, continuing without sizes');
+          }
+        } else {
+          console.log(`[PlayerPage] ⏩ Skipping size probing (${streamsWithSize} streams already have sizes)`);
         }
         
         setStreams(enriched);
