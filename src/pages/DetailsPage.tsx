@@ -352,12 +352,13 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
     <div ref={containerRef} className="min-h-screen -ml-[90px]">
       <div className="relative min-h-[80vh]">
         {(meta.backdrop || meta.background || meta.poster) ? (
-          <div
-            className="absolute inset-0 bg-cover bg-center"
-            style={{
-              backgroundImage: `url(${meta.backdrop || meta.background || meta.poster})`,
-            }}
-          >
+          <div className="absolute inset-0 overflow-hidden">
+            <img
+              src={(meta.backdrop || meta.background || meta.poster)?.replace(/w\d+/, 'original')}
+              alt={displayTitle}
+              className="w-full h-full object-cover object-top"
+              style={{ objectPosition: '50% 20%' }}
+            />
             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-black/40" />
             <div className="absolute bottom-0 left-0 right-0 h-12 bg-gradient-to-b from-transparent to-black" />

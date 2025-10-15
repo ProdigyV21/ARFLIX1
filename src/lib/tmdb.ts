@@ -145,8 +145,8 @@ export async function convertToHeroItem(item: TMDBMovie, type: 'movie' | 'tv'): 
     title,
     year,
     overview: item.overview,
-    poster16x9: tmdbBackdrop(item.backdrop_path, 'w780'),
-    backdrop: tmdbBackdrop(item.backdrop_path, 'w1280'),
+    poster16x9: tmdbBackdrop(item.backdrop_path, 'original'),
+    backdrop: tmdbBackdrop(item.backdrop_path, 'original'),
     rating: item.vote_average ? Math.round(item.vote_average * 10) / 10 : undefined,
     trailer: trailer ? {
       kind: 'youtube',

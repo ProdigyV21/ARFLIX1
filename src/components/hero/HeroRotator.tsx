@@ -132,18 +132,21 @@ export default function HeroRotator({
   // Get highest quality backdrop
   const backdropUrl = currentItem.backdropUrl 
     ? currentItem.backdropUrl.replace(/w\d+/, 'original')
-    : currentItem.posterUrl?.replace(/w\d+/, 'w1280');
+    : currentItem.posterUrl?.replace(/w\d+/, 'original');
 
   return (
     <div className="relative w-[calc(100%+90px)] h-[70vh] overflow-hidden -ml-[90px]">
       {/* Backdrop Image with Crossfade */}
       <div 
-        className={`absolute inset-0 bg-cover bg-center filter brightness-110 saturate-115 contrast-105 transition-opacity duration-${CROSSFADE_DURATION}`}
-        style={{
-          backgroundImage: `url(${backdropUrl})`,
-          opacity: isTransitioning ? 0 : 1
-        }}
+        className={`absolute inset-0 transition-opacity duration-${CROSSFADE_DURATION}`}
+        style={{ opacity: isTransitioning ? 0 : 1 }}
       >
+        <img
+          src={backdropUrl}
+          alt={currentItem.title}
+          className="w-full h-full object-cover object-top filter brightness-110 saturate-115 contrast-105"
+          style={{ objectPosition: '50% 20%' }}
+        />
         {/* Sidebar blend + readability gradients */}
         <div className="absolute left-0 top-0 bottom-0 w-[60px] bg-gradient-to-r from-black/25 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-r from-black/60 via-black/50 to-transparent" />

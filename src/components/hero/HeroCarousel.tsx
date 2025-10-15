@@ -87,12 +87,12 @@ export default function HeroCarousel({ onPlayClick, onInfoClick }: HeroCarouselP
         }}
       >
         {displayItems.map((item, _index) => (
-          <div key={item.id} className="relative w-full h-[75vh] flex-shrink-0 snap-start">
-            <div
-              className="absolute inset-0 bg-cover bg-center"
-              style={{
-                backgroundImage: `url(${item.backdrop})`
-              }}
+          <div key={item.id} className="relative w-full h-[75vh] flex-shrink-0 snap-start overflow-hidden">
+            <img
+              src={item.backdrop}
+              alt={item.title}
+              className="absolute inset-0 w-full h-full object-cover object-top"
+              style={{ objectPosition: '50% 20%' }}
             />
 
             <div className="absolute inset-0 bg-gradient-to-r from-black via-black/60 to-transparent" />
