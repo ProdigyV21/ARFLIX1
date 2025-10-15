@@ -329,9 +329,13 @@ export function PlayerPageNew({
         setLoading(true);
         setError(null);
         
-        console.log('[PlayerPage] Loading streams with:', { contentId, contentType, seasonNumber, episodeNumber });
+        console.log('[PlayerPage] ⚡ Loading streams with:', { contentId, contentType, seasonNumber, episodeNumber });
+        const startTime = performance.now();
         
+        // Fetch streams with caching
         const response = await fetchStreams(contentType, contentId, seasonNumber, episodeNumber);
+        const fetchTime = performance.now() - startTime;
+        console.log(`[PlayerPage] ⏱️ Streams fetched in ${fetchTime.toFixed(0)}ms`);
         console.log('[PlayerPage] Streams response:', response);
         
         if (!response.items || response.items.length === 0) {
@@ -347,7 +351,8 @@ export function PlayerPageNew({
           console.log('[PlayerPage] 🔍 SAMPLE STREAM OBJECT:', response.items[0]);
         }
 
-        // Enrich streams with additional info if available
+        // Enrich streams with additional info if available  
+        const enrichStartTime = performance.now();
         let enriched = response.items.map((s: any) => {
           // determine kind if missing
           let kind: 'hls' | 'dash' | 'mp4' | 'unknown' = s.kind || 'unknown';
@@ -401,11 +406,17 @@ export function PlayerPageNew({
             sourceType: s.sourceType || (s.infoHash ? 'torrent' : (s.url?.startsWith('http') ? 'http' : 'unknown')),
           };
         });
+        
+        const enrichTime = performance.now() - enrichStartTime;
+        console.log(`[PlayerPage] ⏱️ Streams enriched in ${enrichTime.toFixed(0)}ms`);
 
-        // Probe sizes via proxy HEAD for top candidates missing size
+        // Probe sizes via proxy HEAD for top candidates missing size (limit to top 8 for speed)
+        const probeStartTime = performance.now();
         try {
           const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-          const candidates = enriched.filter((s: any) => !s.filesizeBytes).slice(0, 12);
+          const candidates = enriched.filter((s: any) => !s.filesizeBytes).slice(0, 8); // Reduced from 12 to 8
+          console.log(`[PlayerPage] 🔍 Probing ${candidates.length} streams for file sizes...`);
+          
           await Promise.all(candidates.map(async (s: any) => {
             try {
               const headUrl = `${supabaseUrl}/functions/v1/proxy-video?url=${encodeURIComponent(s.url)}&head=1`;
@@ -416,7 +427,11 @@ export function PlayerPageNew({
             return s;
           }));
           // merge back updated objects (same references updated already)
-        } catch {}
+          const probeTime = performance.now() - probeStartTime;
+          console.log(`[PlayerPage] ⏱️ Size probing completed in ${probeTime.toFixed(0)}ms`);
+        } catch {
+          console.log('[PlayerPage] ⚠️ Size probing failed, continuing without sizes');
+        }
         
         setStreams(enriched);
         
@@ -431,8 +446,34 @@ export function PlayerPageNew({
         const caps = await getDeviceCapabilities();
         console.log('[PlayerPage] Device capabilities:', caps);
         
+        // Sort streams by quality (highest first) before selecting
+        const sortedEnriched = enriched.sort((a: any, b: any) => {
+          const qualityA = typeof a.quality === 'number' ? a.quality : parseInt(String(a.quality)) || 0;
+          const qualityB = typeof b.quality === 'number' ? b.quality : parseInt(String(b.quality)) || 0;
+          
+          // Primary sort: Quality (highest first)
+          if (qualityB !== qualityA) return qualityB - qualityA;
+          
+          // Secondary sort: File size (largest first, assuming better quality)
+          const sizeA = a.filesizeBytes || 0;
+          const sizeB = b.filesizeBytes || 0;
+          if (sizeB !== sizeA) return sizeB - sizeA;
+          
+          // Tertiary sort: Seeds (most first)
+          const seedsA = a.seeds || 0;
+          const seedsB = b.seeds || 0;
+          return seedsB - seedsA;
+        });
+        
+        console.log('[PlayerPage] 🎯 Top 5 streams after sorting:', sortedEnriched.slice(0, 5).map((s: any) => ({
+          quality: s.quality,
+          size: s.filesizeBytes ? (s.filesizeBytes / 1024 / 1024 / 1024).toFixed(2) + ' GB' : 'N/A',
+          seeds: s.seeds || 'N/A',
+          title: s.title?.substring(0, 60)
+        })));
+        
         const playableSource = selectPlayableSource(
-          enriched.map((s: any) => {
+          sortedEnriched.map((s: any) => {
             // Determine kind from URL if not provided
             let kind: 'hls' | 'dash' | 'mp4' | 'unknown' = 'unknown';
             if (s.kind) {
@@ -459,7 +500,7 @@ export function PlayerPageNew({
           caps
         );
         
-        const classified = enriched.map((s: any) => {
+        const classified = sortedEnriched.map((s: any) => {
           // Determine kind from URL if not provided
           let kind: 'hls' | 'dash' | 'mp4' | 'unknown' = 'unknown';
           if (s.kind) {
@@ -1173,7 +1214,46 @@ export function PlayerPageNew({
             currentAudioTrack={currentAudioTrack?.id}
             onClose={() => setShowSettings(false)}
             onQualityChange={handleQualityChange}
-            onStreamChange={() => {}}
+            onStreamChange={(newStream: NormalizedStream) => {
+              if (!videoRef.current) return;
+              const currentTime = videoRef.current.currentTime;
+              console.log('[PlayerPage] 🔄 Switching source at', currentTime, 'seconds');
+              console.log('[PlayerPage] New stream:', (newStream as any).title || newStream.url);
+              
+              // Update current stream
+              setCurrentStream(newStream);
+              
+              // Update source details
+              const quality = newStream.quality || 'Unknown';
+              const container = newStream.kind?.toUpperCase() || 'Unknown';
+              const size = (newStream as any).filesizeBytes 
+                ? `${((newStream as any).filesizeBytes / 1024 / 1024 / 1024).toFixed(2)} GB`
+                : '';
+              const seeds = (newStream as any).seeds ? `🌱 ${(newStream as any).seeds}` : '';
+              
+              const details = [quality + 'p', container, size, seeds].filter(Boolean).join(' • ');
+              setSourceDetails(details || 'Unknown Source');
+              
+              // Update display quality
+              const qualityNum = typeof quality === 'number' ? quality : parseInt(String(quality)) || 0;
+              if (qualityNum >= 2160) {
+                setDisplayQuality('4K');
+              } else if (qualityNum >= 1080) {
+                setDisplayQuality('1080p');
+              } else if (qualityNum >= 720) {
+                setDisplayQuality('720p');
+              } else if (qualityNum > 0) {
+                setDisplayQuality(qualityNum + 'p');
+              } else {
+                setDisplayQuality('HD');
+              }
+              
+              // Reinitialize player with new stream at same time
+              initializePlayer(newStream, currentTime);
+              
+              // Close settings panel
+              setShowSettings(false);
+            }}
             onSpeedChange={() => {}}
             onSubtitleChange={(trackId?: string) => {
               const video = videoRef.current;

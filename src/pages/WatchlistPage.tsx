@@ -26,6 +26,29 @@ export function WatchlistPage({ onNavigate }: WatchlistPageProps) {
   async function loadWatchlist() {
     try {
       setLoading(true);
+      
+      // Load from new metadata format first
+      const storedMetadata = localStorage.getItem('watchlist_metadata');
+      if (storedMetadata) {
+        const metadata = JSON.parse(storedMetadata);
+        const items = Object.values(metadata).map((item: any) => ({
+          id: item.id,
+          source: 'watchlist',
+          type: item.type,
+          title: item.title,
+          name: item.title,
+          poster: item.poster,
+          backdrop: item.backdrop,
+          releaseInfo: item.year ? String(item.year) : undefined,
+          rating: item.rating,
+          externalIds: {}
+        }));
+        setItems(items as Title[]);
+        setLoading(false);
+        return;
+      }
+      
+      // Fallback to old format
       const stored = localStorage.getItem('watchlist');
       const arr = stored ? JSON.parse(stored) : [];
       const keys: string[] = Array.isArray(arr)
@@ -37,7 +60,7 @@ export function WatchlistPage({ onNavigate }: WatchlistPageProps) {
         return;
       }
 
-      // Fetch metadata for each id in parallel
+      // Fetch metadata for each id in parallel (legacy support)
       const results = await Promise.allSettled(
         ids.map(id => metadataProvider.getTitle(undefined, id))
       );

@@ -306,7 +306,29 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
         next.add(id);
       }
       try {
+        // Save full metadata for watchlist
+        const storedItems = localStorage.getItem('watchlist_metadata');
+        const metadata = storedItems ? JSON.parse(storedItems) : {};
+        
+        if (!isInWatchlist && meta) {
+          // Add full metadata
+          metadata[id] = {
+            id: id,
+            type: contentType,
+            title: displayTitle,
+            poster: meta.poster,
+            backdrop: meta.backdrop || meta.background,
+            year: meta.year,
+            rating: meta.imdbRating || meta.rating,
+            addedAt: new Date().toISOString()
+          };
+        } else {
+          // Remove metadata
+          delete metadata[id];
+        }
+        
         localStorage.setItem('watchlist', JSON.stringify(Array.from(next)));
+        localStorage.setItem('watchlist_metadata', JSON.stringify(metadata));
       } catch (error) {
         console.error('Failed to save watchlist:', error);
       }
