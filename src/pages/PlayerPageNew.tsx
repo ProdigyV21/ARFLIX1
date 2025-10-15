@@ -164,6 +164,7 @@ export function PlayerPageNew({
         if (!video.paused) {
           // Already playing
         } else {
+          // Try to play - browser will start buffering
           video.play().catch(e => {
             console.warn('[PlayerPage] Autoplay after metadata failed:', e);
           });
@@ -678,11 +679,14 @@ export function PlayerPageNew({
             // Calculate offset: if subtitle appears before speech, delay it
             const calculatedOffset = firstSpeech - firstSubTime;
             
-            // Only apply if offset is significant (> 0.5s)
-            if (Math.abs(calculatedOffset) > 0.5) {
+            // Only apply if offset is reasonable (< 10s) and significant (> 0.5s)
+            // Large offsets (> 10s) indicate intro/trailer mismatch, so ignore them
+            if (Math.abs(calculatedOffset) > 0.5 && Math.abs(calculatedOffset) < 10) {
               setSubtitleOffset(calculatedOffset);
               console.log('[PlayerPage] ✅ Auto-sync complete! Applied offset:', calculatedOffset.toFixed(2), 'seconds');
               console.log('[PlayerPage] First speech at:', firstSpeech.toFixed(2), 's, First subtitle at:', firstSubTime.toFixed(2), 's');
+            } else if (Math.abs(calculatedOffset) >= 10) {
+              console.log('[PlayerPage] ⚠️ Large offset detected (' + calculatedOffset.toFixed(2) + 's), likely intro/trailer. Skipping auto-sync.');
             } else {
               console.log('[PlayerPage] ✅ Subtitles already in sync (offset < 0.5s)');
             }
@@ -1132,6 +1136,7 @@ export function PlayerPageNew({
         className="w-full h-full object-contain"
         playsInline
         crossOrigin="anonymous"
+        preload="auto"
         onClick={() => {
           if (isPlaying) {
             handlePause();

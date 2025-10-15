@@ -37,8 +37,8 @@ export function WatchlistPage({ onNavigate }: WatchlistPageProps) {
           type: item.type,
           title: item.title,
           name: item.title,
-          poster: item.poster,
-          backdrop: item.backdrop,
+          posterUrl: item.poster,  // Map poster to posterUrl
+          backgroundUrl: item.backdrop,  // Map backdrop to backgroundUrl
           releaseInfo: item.year ? String(item.year) : undefined,
           rating: item.rating,
           externalIds: {}

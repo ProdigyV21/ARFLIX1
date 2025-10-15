@@ -547,7 +547,7 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
       </div>
 
       {(meta.type === 'series' || meta.type === 'anime') && seasons.length > 0 && (
-        <div className="relative z-10 bg-transparent -mt-40 sm:-mt-52 md:-mt-64 lg:-mt-72 xl:-mt-80 pt-3 md:pt-4 pb-8">
+        <div className="relative z-10 bg-transparent -mt-56 sm:-mt-64 md:-mt-80 lg:-mt-96 xl:-mt-[450px] pt-3 md:pt-4 pb-8">
           <div className="pl-[102px] pr-8">
           <div className="mb-8">
             <h2 className="text-3xl font-bold mb-4">Seasons</h2>
@@ -650,25 +650,27 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
       )}
 
       <div className={meta.type === 'movie' 
-        ? "pl-[102px] pr-12 pt-0 pb-8 bg-transparent -mt-28 sm:-mt-36 md:-mt-44 lg:-mt-56 xl:-mt-64" 
+        ? "pl-[102px] pr-12 pt-0 pb-8 bg-transparent -mt-48 sm:-mt-56 md:-mt-72 lg:-mt-96 xl:-mt-[450px]" 
         : "pl-[102px] pr-12 py-8 bg-black"}>
         {meta.cast && meta.cast.length > 0 && (
-          <CastCarousel 
-            cast={meta.cast.map((actor, index) => ({
-              id: `cast-${index}`,
-              name: actor.name,
-              character: actor.character || '',
-              profile: actor.profile || undefined,
-              profileUrl: actor.profileUrl
-            }))}
-            onNavigate={(id, t) => {
-              onNavigate('details', {
-                id,
-                type: t
-              });
-            }}
-            className="mb-12"
-          />
+          <div className="mb-12">
+            <h2 className="text-3xl font-bold mb-6">Cast</h2>
+            <CastCarousel 
+              cast={meta.cast.map((actor, index) => ({
+                id: `cast-${index}`,
+                name: actor.name,
+                character: actor.character || '',
+                profile: actor.profile || undefined,
+                profileUrl: actor.profileUrl
+              }))}
+              onNavigate={(id, t) => {
+                onNavigate('details', {
+                  id,
+                  type: t
+                });
+              }}
+            />
+          </div>
         )}
 
         <MoreLikeThis
