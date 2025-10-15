@@ -6,6 +6,8 @@ export default defineConfig({
   plugins: [react()],
   optimizeDeps: {
     exclude: ['lucide-react'],
+    // Exclude old player directory from dependency scanning
+    entries: ['src/**/*.{ts,tsx}', '!src/player/**'],
   },
   build: {
     rollupOptions: {

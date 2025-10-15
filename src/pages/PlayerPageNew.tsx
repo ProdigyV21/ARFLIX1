@@ -738,8 +738,8 @@ export function PlayerPageNew({
     setTimeout(() => {
       console.log('[PlayerPage] TextTracks available:', video.textTracks.length);
 
-      // Find the FIRST subtitle that matches preferred language and enable ONLY that one
-      let foundPreferred = false;
+      // Auto-select the FIRST English subtitle track
+      let foundEnglish = false;
       
       for (let i = 0; i < video.textTracks.length; i++) {
         const track = video.textTracks[i];
@@ -754,30 +754,32 @@ export function PlayerPageNew({
           mode: track.mode
         });
 
-        // Enable ONLY the first subtitle that matches preferred language
-        if (!foundPreferred && preferredSubtitleLang && track.language === preferredSubtitleLang) {
-          // Set to 'showing' so cuechange events fire, but we'll hide native rendering with CSS
-          track.mode = 'showing';
-          setCurrentTextTrack(trackId || track.language);
-          foundPreferred = true;
-          console.log('[PlayerPage] ✅ Enabled FIRST subtitle track:', track.label, 'ID:', trackId);
+        // Auto-enable ONLY the FIRST English subtitle (en/eng/english)
+        const isEnglish = track.language === 'en' || 
+                         track.language === 'eng' || 
+                         track.language.toLowerCase() === 'english' ||
+                         track.label.toLowerCase().includes('english');
 
+        if (!foundEnglish && isEnglish) {
+          track.mode = 'showing'; // Enable for cue events
+          setCurrentTextTrack(trackId || track.language);
+          setPreferredSubtitleLang('en'); // Save preference
+          foundEnglish = true;
+          console.log('[PlayerPage] ✅ AUTO-ENABLED English subtitle:', track.label, 'ID:', trackId);
+
+          // Setup cue change listener with proper sync
           track.addEventListener('cuechange', () => {
-            // Mirror to overlay with offset applied
             const video = videoRef.current;
             if (!video) return;
             
-            // Get active cues considering the offset
             const currentVideoTime = video.currentTime;
-            const adjustedTime = currentVideoTime - subtitleOffset; // Reverse offset for lookup
-            
             const cues = [] as string[];
             
             if (track.cues) {
-              for (let i = 0; i < track.cues.length; i++) {
-                const cue = track.cues[i] as VTTCue;
-                // Check if this cue should be active at the adjusted time
-                if (cue && adjustedTime >= cue.startTime && adjustedTime <= cue.endTime) {
+              for (let j = 0; j < track.cues.length; j++) {
+                const cue = track.cues[j] as VTTCue;
+                // Check if cue is active at current time
+                if (cue && currentVideoTime >= cue.startTime && currentVideoTime <= cue.endTime) {
                   if (cue.text) cues.push(cue.text);
                 }
               }
@@ -785,16 +787,19 @@ export function PlayerPageNew({
             
             setOverlayLines(cues);
             if (cues.length > 0) {
-              console.log('[PlayerPage] 🎬 Cue active (offset:', subtitleOffset.toFixed(2), 's):', cues[0].substring(0, 50));
+              console.log('[PlayerPage] 🎬 Subtitle displayed:', cues[0].substring(0, 50));
             }
           });
         } else {
+          // Disable all other tracks
           track.mode = 'disabled';
         }
       }
       
-      if (!foundPreferred) {
-        console.log('[PlayerPage] No preferred subtitle found, all tracks hidden');
+      if (!foundEnglish) {
+        console.log('[PlayerPage] ⚠️ No English subtitles found - all tracks disabled');
+      } else {
+        console.log('[PlayerPage] ✅ English subtitles auto-enabled and ready!');
       }
     }, 500);
   }
@@ -1130,7 +1135,6 @@ export function PlayerPageNew({
             isBuffering={false}
             volume={volume}
             isMuted={muted}
-            currentQualityLabel={currentStream.quality ? String(currentStream.quality) : 'Unknown'}
             sourceDetails={sourceDetails}
             title={title}
             subtitle={episodeInfo}
@@ -1142,9 +1146,13 @@ export function PlayerPageNew({
             onVolumeChange={handleVolumeChange}
             onMuteToggle={handleMuteToggle}
             onFullscreen={() => {
-              if (videoRef.current) {
-                if (videoRef.current.requestFullscreen) {
-                  videoRef.current.requestFullscreen();
+              if (containerRef.current) {
+                // Request fullscreen on container instead of video element
+                // This preserves our custom UI
+                if (document.fullscreenElement) {
+                  document.exitFullscreen();
+                } else {
+                  containerRef.current.requestFullscreen();
                 }
               }
             }}

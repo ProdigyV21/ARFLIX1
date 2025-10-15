@@ -10,7 +10,6 @@ type PlayerControlsProps = {
   isBuffering: boolean;
   volume: number;
   isMuted: boolean;
-  currentQualityLabel?: string;
   sourceDetails?: string;
   title: string;
   subtitle?: string;
@@ -34,7 +33,6 @@ export function PlayerControls({
   isBuffering,
   volume,
   isMuted,
-  currentQualityLabel,
   sourceDetails,
   title,
   subtitle,
@@ -80,17 +78,12 @@ export function PlayerControls({
         visible ? 'opacity-100' : 'opacity-0 pointer-events-none'
       }`}
     >
-      <div className="absolute top-0 left-0 right-0 p-6 flex items-start justify-between">
+      <div className="absolute top-0 left-0 right-0 p-6">
         <div>
           <h1 className="text-2xl font-bold mb-1">{title}</h1>
           {subtitle && <p className="text-sm text-gray-300">{subtitle}</p>}
           {sourceDetails && <p className="text-xs text-gray-400 mt-1">{sourceDetails}</p>}
         </div>
-        {currentQualityLabel && (
-          <div className="bg-black/60 px-3 py-1 rounded text-sm font-medium">
-            {currentQualityLabel}
-          </div>
-        )}
       </div>
 
       {/* Show buffering spinner in center when buffering */}

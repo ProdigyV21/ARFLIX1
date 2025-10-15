@@ -67,11 +67,16 @@ export function SettingsPanel({
   const subtitleOptions = availableSubtitles.length > 0 ? availableSubtitles : (currentStream.captions || []);
 
   function formatSize(bytes?: number) {
-    if (!bytes || bytes <= 0) return undefined as any;
-    const units = ['B','KB','MB','GB','TB'];
-    let i = 0; let n = bytes;
-    while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
-    return `${n.toFixed(n >= 100 ? 0 : n >= 10 ? 1 : 2)} ${units[i]}`;
+    if (!bytes || bytes <= 0) return null;
+    const gb = bytes / (1024 * 1024 * 1024);
+    if (gb >= 1) {
+      return `${gb.toFixed(2)} GB`;
+    }
+    const mb = bytes / (1024 * 1024);
+    if (mb >= 1) {
+      return `${mb.toFixed(0)} MB`;
+    }
+    return `${(bytes / 1024).toFixed(0)} KB`;
   }
 
   return (
@@ -161,66 +166,78 @@ export function SettingsPanel({
                         key={`${host}-${idx}`}
                         data-focusable="true"
                         onClick={() => onStreamChange(stream)}
-                        className={`w-full p-4 rounded-lg flex items-center justify-between transition-all hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/50 text-left ${
-                          stream.url === currentStream.url ? 'bg-white/10' : ''
+                        className={`w-full p-4 rounded-lg transition-all hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-white/50 text-left ${
+                          stream.url === currentStream.url ? 'bg-white/10 ring-2 ring-blue-500/50' : ''
                         }`}
                       >
+                        <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
-                            <div className="font-medium truncate">{stream.label || `${stream.quality || ''} ${stream.codec || ''}`.trim()}</div>
+                            {/* Title */}
+                            <div className="font-semibold text-base mb-2 truncate">
+                              {stream.label || `${stream.quality || 'Unknown'} ${stream.codec || ''}`.trim()}
+                            </div>
 
-                            {/* Line 1 */}
-                            <div className="flex flex-wrap gap-1.5 mt-2">
+                            {/* Badges Row 1: Quality, Codec, File Size */}
+                            <div className="flex flex-wrap gap-1.5 mb-1.5">
                               {(stream.qualityLabel || stream.quality) && (
-                                <span className="text-xs px-2 py-0.5 rounded bg-neutral-700 text-gray-300">
+                                <span className="text-xs px-2 py-1 rounded bg-blue-600/30 text-blue-200 font-semibold">
                                   {stream.qualityLabel || `${stream.quality}p`}
                                 </span>
                               )}
                               {stream.codec && (
-                                <span className="text-xs px-2 py-0.5 rounded bg-neutral-700 text-gray-300">
+                                <span className="text-xs px-2 py-1 rounded bg-neutral-700 text-gray-300 font-medium">
                                   {String(stream.codec).toUpperCase()}
                                 </span>
                               )}
-                              {Boolean((stream as any).filesizeBytes || (stream as any).fileSizeBytes || (stream as any).sizeBytes || (stream as any).bytes || (stream as any).size) && (
-                                <span className="text-xs px-2 py-0.5 rounded bg-neutral-700 text-gray-300">
-                                  {formatSize((stream as any).filesizeBytes || (stream as any).fileSizeBytes || (stream as any).sizeBytes || (stream as any).bytes || (stream as any).size)}
-                                </span>
-                              )}
-                              {stream.hdr && stream.hdr !== 'none' && (
-                                <span className="text-xs px-2 py-0.5 rounded bg-purple-600/20 text-purple-400">
-                                  {stream.hdr === 'dolby_vision' ? 'Dolby Vision' : 'HDR10'}
-                                </span>
-                              )}
-                              {/* container */}
                               {stream.kind && (
-                                <span className="text-xs px-2 py-0.5 rounded bg-neutral-700 text-gray-300">
+                                <span className="text-xs px-2 py-1 rounded bg-neutral-700 text-gray-300">
                                   {String(stream.kind).toUpperCase()}
                                 </span>
                               )}
-                              {/* seeds */}
-                              {((stream as any).seeds !== undefined) && (
-                                <span className="text-xs px-2 py-0.5 rounded bg-neutral-700 text-gray-300">
-                                  {(stream as any).seeds} seeds
+                              {formatSize((stream as any).filesizeBytes || (stream as any).fileSizeBytes || (stream as any).sizeBytes || (stream as any).bytes || (stream as any).size) && (
+                                <span className="text-xs px-2 py-1 rounded bg-green-600/30 text-green-200 font-semibold">
+                                  📦 {formatSize((stream as any).filesizeBytes || (stream as any).fileSizeBytes || (stream as any).sizeBytes || (stream as any).bytes || (stream as any).size)}
                                 </span>
                               )}
                             </div>
 
-                            {/* Line 2 */}
-                            <div className="flex items-center gap-3 mt-1.5 text-xs text-gray-400">
-                              {stream.provider && <span>{stream.provider}</span>}
-                              {((stream as any).seeds !== undefined || (stream as any).peers !== undefined) && (
-                                <span>
-                                  {(stream as any).seeds ?? '-'}⟂{(stream as any).peers ?? '-'}
+                            {/* Badges Row 2: HDR, Seeds/Peers, Provider */}
+                            <div className="flex flex-wrap gap-1.5">
+                              {stream.hdr && stream.hdr !== 'none' && (
+                                <span className="text-xs px-2 py-1 rounded bg-purple-600/30 text-purple-300 font-semibold">
+                                  ✨ {stream.hdr === 'dolby_vision' ? 'Dolby Vision' : 'HDR10'}
                                 </span>
                               )}
-                              {stream.sourceType && <span>{stream.sourceType}</span>}
-                              {Boolean((stream as any).filesizeBytes || (stream as any).fileSizeBytes || (stream as any).sizeBytes || (stream as any).bytes || (stream as any).size) && (
-                                <span>
-                                  {formatSize((stream as any).filesizeBytes || (stream as any).fileSizeBytes || (stream as any).sizeBytes || (stream as any).bytes || (stream as any).size)}
+                              {((stream as any).seeds !== undefined) && (
+                                <span className="text-xs px-2 py-1 rounded bg-emerald-600/20 text-emerald-300">
+                                  🌱 {(stream as any).seeds} seeds
+                                </span>
+                              )}
+                              {((stream as any).peers !== undefined) && (
+                                <span className="text-xs px-2 py-1 rounded bg-orange-600/20 text-orange-300">
+                                  👥 {(stream as any).peers} peers
+                                </span>
+                              )}
+                              {stream.provider && (
+                                <span className="text-xs px-2 py-1 rounded bg-neutral-700 text-gray-400">
+                                  {stream.provider}
+                                </span>
+                              )}
+                              {stream.sourceType && (
+                                <span className="text-xs px-2 py-1 rounded bg-neutral-700 text-gray-400">
+                                  {stream.sourceType}
                                 </span>
                               )}
                             </div>
                           </div>
-                        {stream.url === currentStream.url && <Check className="w-5 h-5 flex-shrink-0" />}
+                          
+                          {/* Check mark for selected */}
+                          {stream.url === currentStream.url && (
+                            <div className="flex-shrink-0">
+                              <Check className="w-6 h-6 text-blue-400" />
+                            </div>
+                          )}
+                        </div>
                       </button>
                     ))}
                   </div>
