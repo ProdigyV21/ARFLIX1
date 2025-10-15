@@ -7,7 +7,6 @@ import { useFocusManager, useFocusable } from '../lib/focus';
 import { catalogAPI, type CatalogItem, type HomeRow } from '../lib/catalog';
 import { addonAPI } from '../lib/api';
 import { getContinueWatching, saveProgress, type WatchProgress } from '../lib/progress';
-import type { HeroItem } from '../lib/tmdb';
 import type { Page } from '../types/navigation';
 import type { Title } from '../lib/meta/types';
 
@@ -741,7 +740,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
     // Optimistic UI update
     setWatchlistIds(prev => {
       const next = new Set(prev);
-      const baseId = 'id' in item ? (item.id as string) : (item.externalIds?.tmdb ? `tmdb:${item.externalIds.tmdb}` : '');
+      const baseId = 'id' in item ? (item.id as string) : ((item as Title).externalIds?.tmdb ? `tmdb:${(item as Title).externalIds.tmdb}` : '');
       const type = ('type' in item ? (item as any).type : undefined) || 'movie';
       const key = `${type}:${baseId}`;
       
@@ -820,7 +819,7 @@ export function HomePage({ onNavigate }: HomePageProps) {
           <ScrollCarousel id="continue-watching" className="pb-4">
             {continueWatching.map((item, index) => {
               const epLabel = item.seasonNumber && item.episodeNumber ? `S${String(item.seasonNumber).padStart(2,'0')}-E${String(item.episodeNumber).padStart(2,'0')}` : undefined;
-              const pct = item.duration > 0 ? Math.min(100, Math.max(0, (item.position || 0) / item.duration * 100)) : 0;
+              const pct = item.duration > 0 ? Math.min(100, Math.max(0, (item.currentTime || 0) / item.duration * 100)) : 0;
               return (
                 <div key={`${item.id}-${item.title}-${index}`} className="flex-shrink-0 w-[360px]">
                   <MediaCard16x9

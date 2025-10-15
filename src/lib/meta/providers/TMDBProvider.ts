@@ -502,7 +502,8 @@ export class TMDBProvider implements MetadataProvider {
     }
   }
 
-  private getDemoCatalogResults(
+  // Demo catalog results - preserved for potential future use
+  private _getDemoCatalogResults(
     type: 'movie' | 'series',
     catalogId: string,
     opts?: { skip?: number; limit?: number }
@@ -2386,7 +2387,7 @@ export class TMDBProvider implements MetadataProvider {
     return [];
   }
 
-  private getDemoTitle(typeArg: 'movie' | 'series' | undefined, rawId: string): Title {
+  private getDemoTitle(_typeArg: 'movie' | 'series' | undefined, rawId: string): Title {
     // Extract TMDB ID from the rawId
     const tmdbId = rawId.replace('tmdb:', '');
     

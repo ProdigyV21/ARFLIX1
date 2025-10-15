@@ -15,7 +15,7 @@ import { fetchStreams } from '../lib/api';
 import { type Subtitle, fetchSubtitlesWithCache } from '../lib/subtitles';
 import { supabase } from '../lib/supabase';
 import { getDeviceCapabilities } from '../lib/deviceCapabilities';
-import { selectPlayableSource, type StreamWithClassification } from '../lib/streamClassifier';
+import { selectPlayableSource } from '../lib/streamClassifier';
 import IncompatibleSourceSheet from '../components/player/IncompatibleSourceSheet';
 
 type PlayerPageProps = {
@@ -42,12 +42,10 @@ export function PlayerPageNew({
 }: PlayerPageProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const { engineRef, attach, destroy } = useMediaEngine();
+  const { engineRef, attach } = useMediaEngine();
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const hideControlsTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const [streams, setStreams] = useState<NormalizedStream[]>([]);
-  const [classifiedStreams, setClassifiedStreams] = useState<StreamWithClassification[]>([]);
   const [currentStream, setCurrentStream] = useState<NormalizedStream | null>(null);
   const [showIncompatibleSheet, setShowIncompatibleSheet] = useState(false);
   const [subtitleOffset, setSubtitleOffset] = useState<number>(0); // Auto-sync offset in seconds
@@ -85,7 +83,7 @@ export function PlayerPageNew({
     }
   }, [contentId, contentType, seasonNumber, episodeNumber]);
   const [error, setError] = useState<string | null>(null);
-  const [showControls, setShowControls] = useState(true);
+  const [showControls] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -95,7 +93,6 @@ export function PlayerPageNew({
   const [buffered, setBuffered] = useState(0);
   const [qualities, setQualities] = useState<any[]>([]);
   const [audioTracks, setAudioTracks] = useState<any[]>([]);
-  const [textTracks, setTextTracks] = useState<any[]>([]);
   const [currentQuality, setCurrentQuality] = useState<any | undefined>();
   const [currentAudioTrack, setCurrentAudioTrack] = useState<any | undefined>();
   const [currentTextTrack, setCurrentTextTrack] = useState<any | undefined>();
@@ -409,7 +406,7 @@ export function PlayerPageNew({
         try {
           const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
           const candidates = enriched.filter((s: any) => !s.filesizeBytes).slice(0, 12);
-          const probed = await Promise.all(candidates.map(async (s: any) => {
+          await Promise.all(candidates.map(async (s: any) => {
             try {
               const headUrl = `${supabaseUrl}/functions/v1/proxy-video?url=${encodeURIComponent(s.url)}&head=1`;
               const resp = await fetch(headUrl, { method: 'GET' });
@@ -487,7 +484,8 @@ export function PlayerPageNew({
           };
         });
         
-        setClassifiedStreams(classified as StreamWithClassification[]);
+        // Store classified streams for debugging (removed state as it's unused)
+        console.log('[PlayerPage] Classified streams:', classified);
         
         if (!playableSource) {
           console.warn('[PlayerPage] No compatible sources found!');
@@ -503,7 +501,7 @@ export function PlayerPageNew({
           setCurrentStream(matchingStream);
           
           // Build better source details
-          const quality = matchingStream.quality || playableSource.classification?.quality || 'Unknown';
+          const quality = matchingStream.quality || 'Unknown';
           const container = playableSource.classification?.container?.toUpperCase() || 'Unknown';
           const size = (matchingStream as any).filesizeBytes 
             ? `${((matchingStream as any).filesizeBytes / 1024 / 1024 / 1024).toFixed(2)} GB`
@@ -809,12 +807,12 @@ export function PlayerPageNew({
       try {
         console.log('[PlayerPage] ===== LOADING SUBTITLES FROM STREAM =====');
         
-        // Check if stream has embedded subtitles
-        if (currentStream.subtitles && currentStream.subtitles.length > 0) {
-          console.log('[PlayerPage] Stream has embedded subtitles:', currentStream.subtitles);
-          // Handle embedded subtitles
+        // Check if stream has embedded captions (using captions property)
+        if (currentStream.captions && currentStream.captions.length > 0) {
+          console.log('[PlayerPage] Stream has embedded captions:', currentStream.captions);
+          // Handle embedded captions - convert to Subtitle format if needed
         } else {
-          console.log('[PlayerPage] No stream subtitles, fetching from built-in addons...');
+          console.log('[PlayerPage] No stream captions, fetching from built-in addons...');
           
           // Fetch subtitles from built-in addons (OpenSubtitles v3 & Subscene)
           const fetchedSubtitles = await fetchSubtitlesWithCache(
@@ -852,7 +850,7 @@ export function PlayerPageNew({
       try {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          const { data, error } = await supabase
+          const { data } = await supabase
             .from('users')
             .select('preferred_subtitle_language')
             .eq('id', user.id)
@@ -877,9 +875,12 @@ export function PlayerPageNew({
 
       try {
         const progress = getProgress(contentId, seasonNumber, episodeNumber);
-        if (progress && progress.progress > 0.05) { // Only show if more than 5% watched
-          setResumeTime(progress.progress * duration);
-          setShowResumePrompt(true);
+        if (progress && progress.currentTime > 0 && progress.duration > 0) {
+          const progressPercent = progress.currentTime / progress.duration;
+          if (progressPercent > 0.05) { // Only show if more than 5% watched
+            setResumeTime(progress.currentTime);
+            setShowResumePrompt(true);
+          }
         }
       } catch (err) {
         console.error('Failed to load progress:', err);
@@ -984,40 +985,15 @@ export function PlayerPageNew({
   const handleAudioTrackChange = useCallback(async (trackId: string) => {
     try {
       if (engineRef.current) {
-        await setAudioTrack(engineRef.current, trackId);
+        // Convert trackId string to number for setAudioTrack
+        const trackIndex = parseInt(trackId, 10);
+        if (!isNaN(trackIndex)) {
+          await setAudioTrack(engineRef.current, trackIndex);
+        }
       }
     } catch (err) {
       console.error('Failed to set audio track:', err);
     }
-  }, []);
-
-  const handleTextTrackChange = useCallback(async (trackId?: string) => {
-    try {
-      // Handle text track changes
-      console.log('Text track change:', trackId);
-    } catch (err) {
-      console.error('Failed to set text track:', err);
-    }
-  }, []);
-
-  const handleAttachSubtitle = useCallback(async (url: string, format: 'vtt'|'ass'|'srt', lang?: string, label?: string) => {
-    try {
-      // Handle external subtitle attachment
-      console.log('Attach subtitle:', url, format, lang, label);
-    } catch (err) {
-      console.error('Failed to attach subtitle:', err);
-    }
-  }, []);
-
-  // UI control methods
-  const handleMouseMove = useCallback(() => {
-    setShowControls(true);
-    if (hideControlsTimeoutRef.current) {
-      clearTimeout(hideControlsTimeoutRef.current);
-    }
-    hideControlsTimeoutRef.current = setTimeout(() => {
-      setShowControls(false);
-    }, 3000);
   }, []);
 
   const handleResume = useCallback(() => {
@@ -1097,8 +1073,8 @@ export function PlayerPageNew({
 
       {showIncompatibleSheet && (
         <IncompatibleSourceSheet
+          streams={[]}
           onClose={() => setShowIncompatibleSheet(false)}
-          onRetry={() => window.location.reload()}
         />
       )}
 
@@ -1154,7 +1130,7 @@ export function PlayerPageNew({
             isBuffering={false}
             volume={volume}
             isMuted={muted}
-            currentQualityLabel={currentStream.quality || 'Unknown'}
+            currentQualityLabel={currentStream.quality ? String(currentStream.quality) : 'Unknown'}
             sourceDetails={sourceDetails}
             title={title}
             subtitle={episodeInfo}

@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { NotificationContainer } from './components/Notifications';
 import { AuthWrapper } from './components/AuthWrapper';
 import { OnboardingWizard } from './components/OnboardingWizard';
 import { Sidebar } from './components/Sidebar';
 import { HomePage } from './pages/HomePage';
 import { DetailsPage } from './pages/DetailsPage';
-import { PlayerPage } from './pages/PlayerPage';
 import { PlayerPageNew } from './pages/PlayerPageNew';
 import { PlayerTestPage } from './pages/PlayerTestPage';
 import { AddonsPage } from './pages/AddonsPage';
@@ -152,21 +153,24 @@ function App() {
   }
 
   return (
-    <AuthWrapper>
-      {() => (
-        <div className="min-h-screen text-white">
-          {showOnboarding && <OnboardingWizard onComplete={handleOnboardingComplete} />}
+    <ErrorBoundary>
+      <NotificationContainer />
+      <AuthWrapper>
+        {() => (
+          <div className="min-h-screen text-white">
+            {showOnboarding && <OnboardingWizard onComplete={handleOnboardingComplete} />}
 
-          {currentPage.page !== 'player' && (
-            <Sidebar currentPage={currentPage.page} onNavigate={navigate} />
-          )}
+            {currentPage.page !== 'player' && (
+              <Sidebar currentPage={currentPage.page} onNavigate={navigate} />
+            )}
 
-          <main className={currentPage.page !== 'player' ? 'ml-[90px]' : ''}>
-            {renderPage()}
-          </main>
-        </div>
-      )}
-    </AuthWrapper>
+            <main className={currentPage.page !== 'player' ? 'ml-[90px]' : ''}>
+              {renderPage()}
+            </main>
+          </div>
+        )}
+      </AuthWrapper>
+    </ErrorBoundary>
   );
 }
 

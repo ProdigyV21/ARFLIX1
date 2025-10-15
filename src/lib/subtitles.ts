@@ -135,7 +135,7 @@ export async function fetchSubtitlesWithCache(
   return fetchSubtitles(contentId, contentType, season, episode);
 }
 
-function getLangCode(osLang: string): string {
+export function getLangCode(osLang: string): string {
   const map: Record<string, string> = {
     'eng': 'en', 'spa': 'es', 'fre': 'fr', 'ger': 'de',
     'ita': 'it', 'por': 'pt', 'jpn': 'ja', 'kor': 'ko',
@@ -144,7 +144,7 @@ function getLangCode(osLang: string): string {
   return map[osLang] || osLang;
 }
 
-function getLangLabel(langCode: string): string {
+export function getLangLabel(langCode: string): string {
   const map: Record<string, string> = {
     'en': 'English', 'es': 'Español', 'fr': 'Français', 'de': 'Deutsch',
     'it': 'Italiano', 'pt': 'Português', 'ja': '日本語', 'ko': '한국어',

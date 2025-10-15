@@ -635,7 +635,7 @@ export function DetailsPage({ contentId, contentType, addonId, onNavigate, onBac
               id: `cast-${index}`,
               name: actor.name,
               character: actor.character || '',
-              profile: actor.profile,
+              profile: actor.profile || undefined,
               profileUrl: actor.profileUrl
             }))}
             onNavigate={(id, t) => {

@@ -64,8 +64,8 @@ export default function ActorModal({ actor, onClose, onNavigate }: ActorModalPro
           .slice(0, 12)
           .map((credit: any) => ({
             id: `tmdb:${credit.id}`,
-            title: credit.title || credit.name,
-            type: credit.media_type === 'tv' ? 'series' : 'movie',
+            title: String(credit.title || credit.name || 'Unknown'),
+            type: (credit.media_type === 'tv' ? 'series' : 'movie') as 'movie' | 'series',
             poster: credit.poster_path 
               ? `https://image.tmdb.org/t/p/w342${credit.poster_path}`
               : undefined,

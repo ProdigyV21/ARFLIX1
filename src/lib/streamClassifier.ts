@@ -260,13 +260,6 @@ function checkIncompatibilities(
   }
 
   if (classification.resolution) {
-    const resolutionValue = {
-      '4K': 2160,
-      '1080p': 1080,
-      '720p': 720,
-      '480p': 480
-    }[classification.resolution] || 0;
-
     // No resolution caps - allow all resolutions
   }
 

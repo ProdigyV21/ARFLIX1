@@ -106,11 +106,22 @@ export function createPlayer(
     player.updateSettings({ streaming: { abr: { autoSwitchBitrate: { video: false } } } });
 
     const selectHighestDash = () => {
-      const tracks = player.getBitrateInfoListFor('video');
-      if (!tracks || tracks.length === 0) return;
-      const best = tracks.sort((a: any, b: any) => (b.height || 0) - (a.height || 0))[0];
-      if (best && typeof best.qualityIndex === 'number') {
-        player.setQualityFor('video', best.qualityIndex);
+      try {
+        // DASH.js v5 API: Use any type due to incomplete type definitions
+        const bitrateList = (player as any).getBitrateInfoListFor?.('video');
+        if (!bitrateList || bitrateList.length === 0) return;
+        
+        // Sort by quality and select the highest
+        const sortedList = [...bitrateList].sort((a: any, b: any) => 
+          (b.height || 0) - (a.height || 0)
+        );
+        
+        if (sortedList.length > 0) {
+          // Set quality to the highest available index
+          (player as any).setQualityFor?.('video', sortedList.length - 1);
+        }
+      } catch (error) {
+        console.warn('Failed to set DASH quality:', error);
       }
     };
 
