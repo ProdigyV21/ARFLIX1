@@ -366,7 +366,20 @@ export function PlayerPageNew({
             s.filesizeBytes || s.fileSizeBytes || s.sizeBytes || s.bytes || s.fileBytes ||
             (typeof s.size === 'number' ? s.size : undefined);
           
-          // Extract file size from title/name if not available (e.g., "63.16 GB" or "2.5GB")
+          // Try parsing the fileSize string field from backend (e.g., "63.16 GB")
+          if (!sizeNumeric && s.fileSize && typeof s.fileSize === 'string') {
+            const sizeMatch = s.fileSize.match(/(\d+(?:\.\d+)?)\s*(GB|MB|TB)/i);
+            if (sizeMatch) {
+              const value = parseFloat(sizeMatch[1]);
+              const unit = sizeMatch[2].toUpperCase();
+              if (unit === 'GB') sizeNumeric = value * 1024 * 1024 * 1024;
+              else if (unit === 'MB') sizeNumeric = value * 1024 * 1024;
+              else if (unit === 'TB') sizeNumeric = value * 1024 * 1024 * 1024 * 1024;
+              console.log('[PlayerPage] ✅ Extracted size from fileSize field:', value, unit, '(', s.fileSize, ')');
+            }
+          }
+          
+          // Extract file size from title/name/label if still not available
           const textToSearch = s.title || s.name || s.label || '';
           if (!sizeNumeric && textToSearch) {
             const sizeMatch = textToSearch.match(/(\d+(?:\.\d+)?)\s*(GB|MB|TB)/i);
@@ -376,7 +389,7 @@ export function PlayerPageNew({
               if (unit === 'GB') sizeNumeric = value * 1024 * 1024 * 1024;
               else if (unit === 'MB') sizeNumeric = value * 1024 * 1024;
               else if (unit === 'TB') sizeNumeric = value * 1024 * 1024 * 1024 * 1024;
-              console.log('[PlayerPage] ✅ Extracted size:', value, unit, 'from:', textToSearch.substring(0, 80));
+              console.log('[PlayerPage] ✅ Extracted size from title/label:', value, unit, 'from:', textToSearch.substring(0, 80));
             }
           }
           

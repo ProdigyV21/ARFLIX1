@@ -290,9 +290,11 @@ async function fetchStreamsFromAddon(
           console.log(`[STREAMS] Proxying URL: ${stream.url.substring(0, 60)}...`);
         }
 
-        const fileSize = parseFileSize(label);
-        const audioCodec = parseAudioCodec(label);
-        const { seeds } = parseSeedsAndPeers(label);
+        // Parse file size and audio codec from the ORIGINAL stream title/name, not the constructed label
+        const originalText = stream.name || stream.title || "";
+        const fileSize = parseFileSize(originalText);
+        const audioCodec = parseAudioCodec(originalText);
+        const { seeds } = parseSeedsAndPeers(originalText);
 
         allStreams.push({
           url: finalUrl,
