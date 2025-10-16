@@ -336,21 +336,21 @@ export function SettingsPage() {
                 it does not bundle any add-ons itself.
               </p>
               <p className="text-muted-foreground leading-relaxed mb-3">
-                <strong className="text-white">Recommended:</strong> Configure AIOStreams to generate your own
-                add-on URL using your personal debrid accounts.
+                <strong className="text-white">Recommended:</strong> Use Torrentio for streaming content.
+                Torrentio is a popular, reliable Stremio add-on that works well with ArFlix.
               </p>
               <p className="text-muted-foreground leading-relaxed mb-4">
                 <strong className="text-white">Tip:</strong> Use only sources and services that you are legally
                 allowed to access in your jurisdiction.
               </p>
               <a
-                href="https://aiostreams.elfhosted.com/stremio/configure"
+                href="https://torrentio.strem.fun/configure"
                 target="_blank"
                 rel="noopener noreferrer"
                 data-focusable="true"
                 className="inline-block px-6 py-3 bg-white/10 hover:bg-white/20 rounded-lg transition-colors"
               >
-                Configure AIOStreams →
+                Configure Torrentio →
               </a>
             </div>
 

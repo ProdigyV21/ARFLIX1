@@ -48,25 +48,64 @@ Deno.serve(async (req: Request) => {
   
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "Missing authorization header" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
     
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") || "",
       Deno.env.get("SUPABASE_ANON_KEY") || "",
-      { global: { headers: { Authorization: authHeader } } }
+      authHeader ? { global: { headers: { Authorization: authHeader } } } : {}
     );
     
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Get or create anonymous user for addons
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    
+    let userId: string;
+    
+    if (authUser) {
+      // Authenticated user - get or create user record
+      const { data: existingUser } = await supabase
+        .from("users")
+        .select("id")
+        .eq("auth_id", authUser.id)
+        .maybeSingle();
+      
+      if (existingUser) {
+        userId = existingUser.id;
+      } else {
+        const { data: newUser, error: createError } = await supabase
+          .from("users")
+          .insert({ auth_id: authUser.id })
+          .select("id")
+          .single();
+        
+        if (createError || !newUser) {
+          throw new Error("Failed to create user record");
+        }
+        userId = newUser.id;
+      }
+    } else {
+      // Anonymous user - create or use anonymous user record
+      const ANONYMOUS_USER_ID = "00000000-0000-0000-0000-000000000000";
+      
+      const { data: anonUser } = await supabase
+        .from("users")
+        .select("id")
+        .eq("id", ANONYMOUS_USER_ID)
+        .maybeSingle();
+      
+      if (!anonUser) {
+        const { data: newAnon, error: createError } = await supabase
+          .from("users")
+          .insert({ id: ANONYMOUS_USER_ID, auth_id: null })
+          .select("id")
+          .single();
+        
+        if (createError || !newAnon) {
+          throw new Error("Failed to create anonymous user");
+        }
+        userId = newAnon.id;
+      } else {
+        userId = anonUser.id;
+      }
     }
     
     const url = new URL(req.url);
@@ -92,7 +131,7 @@ Deno.serve(async (req: Request) => {
       const { data: addons, error } = await supabase
         .from("addons")
         .select("*")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .order("order_position", { ascending: true });
       
       if (error) throw error;
@@ -119,7 +158,7 @@ Deno.serve(async (req: Request) => {
         const { error } = await supabase
           .from("addons")
           .update({ enabled, updated_at: new Date().toISOString() })
-          .eq("user_id", user.id)
+          .eq("user_id", userId)
           .eq("url", addonUrl);
         
         if (error) throw error;
@@ -144,7 +183,7 @@ Deno.serve(async (req: Request) => {
           await supabase
             .from("addons")
             .update({ order_position: i })
-            .eq("user_id", user.id)
+            .eq("user_id", userId)
             .eq("url", urls[i]);
         }
         
@@ -173,7 +212,7 @@ Deno.serve(async (req: Request) => {
             last_health_check: new Date().toISOString(),
             updated_at: new Date().toISOString(),
           })
-          .eq("user_id", user.id)
+          .eq("user_id", userId)
           .eq("url", addonUrl);
         
         return new Response(
@@ -201,7 +240,7 @@ Deno.serve(async (req: Request) => {
       const { error } = await supabase
         .from("addons")
         .delete()
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .eq("url", addonUrl);
       
       if (error) throw error;

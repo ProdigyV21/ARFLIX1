@@ -1,88 +1,183 @@
-# ArFlix - Streaming Catalog PWA
+# Supabase CLI
 
-A modern, TV-optimized Progressive Web App featuring **live catalogs from TMDB, Trakt, and AniList** with Stremio add-on integration for playback.
+[![Coverage Status](https://coveralls.io/repos/github/supabase/cli/badge.svg?branch=main)](https://coveralls.io/github/supabase/cli?branch=main) [![Bitbucket Pipelines](https://img.shields.io/bitbucket/pipelines/supabase-cli/setup-cli/master?style=flat-square&label=Bitbucket%20Canary)](https://bitbucket.org/supabase-cli/setup-cli/pipelines) [![Gitlab Pipeline Status](https://img.shields.io/gitlab/pipeline-status/sweatybridge%2Fsetup-cli?label=Gitlab%20Canary)
+](https://gitlab.com/sweatybridge/setup-cli/-/pipelines)
 
-## Features
+[Supabase](https://supabase.io) is an open source Firebase alternative. We're building the features of Firebase using enterprise-grade open source tools.
 
-- **Live Catalogs**: Real movies, series, and anime from TMDB, Trakt, and AniList APIs
-- **10 Curated Collections**: Trending, Top Rated, New Releases, Genres, Critics' Picks
-- **OLED-First Design**: True black backgrounds with high-contrast text
-- **TV Remote Navigation**: Full D-pad and keyboard navigation with smart focus manager
-- **Stremio Add-ons for Playback**: Browse free catalogs, add add-ons like AIOStreams to watch
-- **Netflix-Style UI**: Hero sections, horizontal carousels, smooth animations
-- **PWA Support**: Installable on any device
-- **Multi-Source Search**: Search across TMDB and AniList simultaneously
+This repository contains all the functionality for Supabase CLI.
 
-## How It Works
+- [x] Running Supabase locally
+- [x] Managing database migrations
+- [x] Creating and deploying Supabase Functions
+- [x] Generating types directly from your database schema
+- [x] Making authenticated HTTP requests to [Management API](https://supabase.com/docs/reference/api/introduction)
 
-1. **Browse**: Home page shows real content from TMDB/Trakt/AniList (no add-ons needed)
-2. **Details**: View metadata, cast, genres for any title
-3. **Add Stremio Add-on**: To watch, connect an add-on like AIOStreams (with your own debrid keys)
-4. **Stream**: Add-on provides playable streams, ArFlix displays them beautifully
+## Getting started
 
-**ArFlix surfaces catalogs publicly and lets users bring their own streaming sources.**
+### Install the CLI
 
-## Setup
+Available via [NPM](https://www.npmjs.com) as dev dependency. To install:
 
-### Prerequisites
-
-- Node.js 18+ and npm
-- **TMDB API Key** (required) - Get free at themoviedb.org/settings/api
-- **Trakt Client ID** (optional) - Get at trakt.tv/oauth/applications
-- Supabase account (database already configured)
-
-### Environment Variables
-
-Create a `.env` file in the root directory with your API keys:
-
-```env
-# Supabase Configuration
-VITE_SUPABASE_URL=your_supabase_url_here
-VITE_SUPABASE_ANON_KEY=your_supabase_anon_key_here
-
-# TMDB API Key (for metadata and images)
-VITE_TMDB_API_KEY=your_tmdb_api_key_here
+```bash
+npm i supabase --save-dev
 ```
 
-### Quick Start
+To install the beta release channel:
 
-1. **Install dependencies:**
-   ```bash
-   npm install
-   ```
+```bash
+npm i supabase@beta --save-dev
+```
 
-2. **Set up environment variables:**
-   - Copy `.env.example` to `.env`
-   - Add your Supabase URL and keys
-   - Add your TMDB API key
+When installing with yarn 4, you need to disable experimental fetch with the following nodejs config.
 
-3. **Run the development server:**
-   ```bash
-   npm run dev
-   ```
+```
+NODE_OPTIONS=--no-experimental-fetch yarn add supabase
+```
 
-4. **Access the app:**
-   - Open http://localhost:5173 in your browser
-   - Sign up for an account or sign in
-   - Browse the demo content (works without addons)
-   - Add Stremio addons in Settings > Add-ons to enable streaming
+> **Note**
+For Bun versions below v1.0.17, you must add `supabase` as a [trusted dependency](https://bun.sh/guides/install/trusted) before running `bun add -D supabase`.
 
-### Demo Mode
+<details>
+  <summary><b>macOS</b></summary>
 
-The app includes demo content that works without any configuration. You can:
-- Browse popular movies and TV shows
-- View details and metadata
-- See the interface and navigation
-- Add addons later for actual streaming
+  Available via [Homebrew](https://brew.sh). To install:
 
-## Legal Notice
+  ```sh
+  brew install supabase/tap/supabase
+  ```
 
-ArFlix displays public metadata from TMDB, Trakt, and AniList. Users connect their own Stremio add-ons for streaming. ArFlix does not host or provide video content.
+  To install the beta release channel:
+  
+  ```sh
+  brew install supabase/tap/supabase-beta
+  brew link --overwrite supabase-beta
+  ```
+  
+  To upgrade:
 
-## License
+  ```sh
+  brew upgrade supabase
+  ```
+</details>
 
-MIT License
+<details>
+  <summary><b>Windows</b></summary>
 
----
+  Available via [Scoop](https://scoop.sh). To install:
 
-Built for TV enthusiasts | Browse publicly, stream privately
+  ```powershell
+  scoop bucket add supabase https://github.com/supabase/scoop-bucket.git
+  scoop install supabase
+  ```
+
+  To upgrade:
+
+  ```powershell
+  scoop update supabase
+  ```
+</details>
+
+<details>
+  <summary><b>Linux</b></summary>
+
+  Available via [Homebrew](https://brew.sh) and Linux packages.
+
+  #### via Homebrew
+
+  To install:
+
+  ```sh
+  brew install supabase/tap/supabase
+  ```
+
+  To upgrade:
+
+  ```sh
+  brew upgrade supabase
+  ```
+
+  #### via Linux packages
+
+  Linux packages are provided in [Releases](https://github.com/supabase/cli/releases). To install, download the `.apk`/`.deb`/`.rpm`/`.pkg.tar.zst` file depending on your package manager and run the respective commands.
+
+  ```sh
+  sudo apk add --allow-untrusted <...>.apk
+  ```
+
+  ```sh
+  sudo dpkg -i <...>.deb
+  ```
+
+  ```sh
+  sudo rpm -i <...>.rpm
+  ```
+
+  ```sh
+  sudo pacman -U <...>.pkg.tar.zst
+  ```
+</details>
+
+<details>
+  <summary><b>Other Platforms</b></summary>
+
+  You can also install the CLI via [go modules](https://go.dev/ref/mod#go-install) without the help of package managers.
+
+  ```sh
+  go install github.com/supabase/cli@latest
+  ```
+
+  Add a symlink to the binary in `$PATH` for easier access:
+
+  ```sh
+  ln -s "$(go env GOPATH)/bin/cli" /usr/bin/supabase
+  ```
+
+  This works on other non-standard Linux distros.
+</details>
+
+<details>
+  <summary><b>Community Maintained Packages</b></summary>
+
+  Available via [pkgx](https://pkgx.sh/). Package script [here](https://github.com/pkgxdev/pantry/blob/main/projects/supabase.com/cli/package.yml).
+  To install in your working directory:
+
+  ```bash
+  pkgx install supabase
+  ```
+
+  Available via [Nixpkgs](https://nixos.org/). Package script [here](https://github.com/NixOS/nixpkgs/blob/master/pkgs/development/tools/supabase-cli/default.nix).
+</details>
+
+### Run the CLI
+
+```bash
+supabase bootstrap
+```
+
+Or using npx:
+
+```bash
+npx supabase bootstrap
+```
+
+The bootstrap command will guide you through the process of setting up a Supabase project using one of the [starter](https://github.com/supabase-community/supabase-samples/blob/main/samples.json) templates.
+
+## Docs
+
+Command & config reference can be found [here](https://supabase.com/docs/reference/cli/about).
+
+## Breaking changes
+
+We follow semantic versioning for changes that directly impact CLI commands, flags, and configurations.
+
+However, due to dependencies on other service images, we cannot guarantee that schema migrations, seed.sql, and generated types will always work for the same CLI major version. If you need such guarantees, we encourage you to pin a specific version of CLI in package.json.
+
+## Developing
+
+To run from source:
+
+```sh
+# Go >= 1.22
+go run . help
+```

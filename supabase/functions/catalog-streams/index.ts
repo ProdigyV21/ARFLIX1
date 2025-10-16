@@ -367,25 +367,44 @@ Deno.serve(async (req: Request) => {
 
   try {
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(
-        JSON.stringify({ error: "Missing authorization header" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
+    
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") || "",
       Deno.env.get("SUPABASE_ANON_KEY") || "",
-      { global: { headers: { Authorization: authHeader } } }
+      authHeader ? { global: { headers: { Authorization: authHeader } } } : {}
     );
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Get or create anonymous user for addons
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    
+    let userId: string;
+    
+    if (authUser) {
+      // Authenticated user - get or create user record
+      const { data: existingUser } = await supabase
+        .from("users")
+        .select("id")
+        .eq("auth_id", authUser.id)
+        .maybeSingle();
+      
+      if (existingUser) {
+        userId = existingUser.id;
+      } else {
+        const { data: newUser, error: createError } = await supabase
+          .from("users")
+          .insert({ auth_id: authUser.id })
+          .select("id")
+          .single();
+        
+        if (createError || !newUser) {
+          throw new Error("Failed to create user record");
+        }
+        userId = newUser.id;
+      }
+    } else {
+      // Anonymous user - use anonymous user record
+      const ANONYMOUS_USER_ID = "00000000-0000-0000-0000-000000000000";
+      userId = ANONYMOUS_USER_ID;
     }
 
     const url = new URL(req.url);
@@ -405,7 +424,7 @@ Deno.serve(async (req: Request) => {
     const { data: addons, error: addonsError } = await supabase
       .from("addons")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", userId)
       .eq("enabled", true)
       .order("order_position", { ascending: true });
 

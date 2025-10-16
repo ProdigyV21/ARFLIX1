@@ -13,18 +13,38 @@ Deno.serve(async (req: Request) => {
   }
 
   try {
+    const authHeader = req.headers.get("Authorization");
+    
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-      { global: { headers: { Authorization: req.headers.get("Authorization")! } } }
+      authHeader ? { global: { headers: { Authorization: authHeader } } } : {}
     );
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return new Response(
-        JSON.stringify({ error: "Unauthorized" }),
-        { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    // Get or create anonymous user for addons
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    
+    let userId: string;
+    
+    if (authUser) {
+      const { data: existingUser } = await supabase
+        .from("users")
+        .select("id")
+        .eq("auth_id", authUser.id)
+        .maybeSingle();
+      
+      if (existingUser) {
+        userId = existingUser.id;
+      } else {
+        const { data: newUser } = await supabase
+          .from("users")
+          .insert({ auth_id: authUser.id })
+          .select("id")
+          .single();
+        userId = newUser?.id ?? "00000000-0000-0000-0000-000000000000";
+      }
+    } else {
+      userId = "00000000-0000-0000-0000-000000000000";
     }
 
     const url = new URL(req.url);
@@ -47,7 +67,7 @@ Deno.serve(async (req: Request) => {
         .from("addons")
         .select("*")
         .eq("id", addonId)
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .eq("enabled", true)
         .maybeSingle();
 
@@ -93,7 +113,7 @@ Deno.serve(async (req: Request) => {
         .from("addons")
         .select("*")
         .eq("id", addonId)
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .eq("enabled", true)
         .maybeSingle();
 
@@ -132,7 +152,7 @@ Deno.serve(async (req: Request) => {
         .from("addons")
         .select("*")
         .eq("id", addonId)
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .eq("enabled", true)
         .maybeSingle();
 
