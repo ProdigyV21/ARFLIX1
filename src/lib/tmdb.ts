@@ -3,7 +3,9 @@ import { supabase } from './supabase';
 import { cachedFetch } from './cache';
 
 const TMDB_IMAGE_BASE = 'https://image.tmdb.org/t/p';
-const USE_PROXY = true; // Set to false for local development if needed
+// Default to false to avoid routing TMDB traffic through Supabase (bandwidth heavy).
+// Can be overridden via VITE_USE_PROXY=true in environment for explicit proxy usage.
+const USE_PROXY = (import.meta.env.VITE_USE_PROXY === 'true') || false;
 const CACHE_TTL = 10 * 60 * 1000; // 10 minutes
 
 export interface TMDBMovie {

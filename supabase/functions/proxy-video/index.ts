@@ -29,7 +29,7 @@ Deno.serve(async (req: Request) => {
       );
     }
 
-    console.log('[proxy-video] Proxying:', videoUrl.substring(0, 100), isHeadRequest ? '(HEAD)' : '');
+  console.log('[proxy-video] Proxying:', videoUrl.substring(0, 100), isHeadRequest ? '(HEAD)' : '');
 
     const rangeHeader = req.headers.get("range");
     const ifRangeHeader = req.headers.get("if-range");

@@ -154,6 +154,10 @@ export function getLangLabel(langCode: string): string {
 }
 
 export function getSubtitleProxyUrl(subtitleUrl: string): string {
+  // Only use Supabase subtitle proxy if explicitly enabled via env var
+  const useProxy = import.meta.env.VITE_USE_PROXY === 'true';
+  if (!useProxy) return subtitleUrl;
+
   const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
   return `${supabaseUrl}/functions/v1/proxy-subtitle?url=${encodeURIComponent(subtitleUrl)}`;
 }
