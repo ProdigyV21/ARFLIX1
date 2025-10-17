@@ -4,16 +4,22 @@ const API_BASE = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1`;
 
 async function getAuthHeaders(): Promise<Record<string, string>> {
   const { data: { session } } = await supabase.auth.getSession();
+  
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    'apikey': import.meta.env.VITE_SUPABASE_ANON_KEY,
+  };
+  
   if (!session) {
     // For development, allow unauthenticated requests to some endpoints
-    console.warn('No session found, making unauthenticated request');
-    return { 'Content-Type': 'application/json' } as Record<string, string>;
+    console.warn('No session found, making unauthenticated request with apikey');
+    return headers;
   }
 
   return {
+    ...headers,
     Authorization: `Bearer ${session.access_token}`,
-    'Content-Type': 'application/json',
-  } as Record<string, string>;
+  };
 }
 
 export const addonAPI = {
