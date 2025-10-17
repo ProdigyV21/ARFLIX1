@@ -277,18 +277,8 @@ async function fetchStreamsFromAddon(
 
         // For Torrentio URLs, just proxy them - the proxy will handle redirects
         // Don't skip streams, let the user try them all
-        let finalUrl = stream.url;
-        
-        // Proxy URLs that need CORS handling or redirect resolution
-        const shouldProxy = 
-          stream.url.includes("real-debrid.com") || 
-          stream.url.includes("torrentio.strem.fun/resolve/");
-        
-        if (shouldProxy) {
-          const proxyBase = Deno.env.get("SUPABASE_URL") || "";
-          finalUrl = `${proxyBase}/functions/v1/proxy-video?url=${encodeURIComponent(stream.url)}`;
-          console.log(`[STREAMS] Proxying URL: ${stream.url.substring(0, 60)}...`);
-        }
+        // Use direct URLs - no proxying (bandwidth optimization)
+        const finalUrl = stream.url;
 
         // Parse file size and audio codec from the ORIGINAL stream title/name, not the constructed label
         const originalText = stream.name || stream.title || "";
