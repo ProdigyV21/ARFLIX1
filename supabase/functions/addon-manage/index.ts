@@ -116,6 +116,49 @@ Deno.serve(async (req: Request) => {
       
       if (error) throw error;
       
+      // Auto-setup: If user has no addons, copy from anonymous user
+      if (!addons || addons.length === 0) {
+        console.log('[addon-manage] User has no addons, copying from anonymous user...');
+        const ANONYMOUS_USER_ID = "00000000-0000-0000-0000-000000000000";
+        
+        const { data: anonymousAddons } = await supabase
+          .from("addons")
+          .select("*")
+          .eq("user_id", ANONYMOUS_USER_ID)
+          .eq("enabled", true);
+        
+        if (anonymousAddons && anonymousAddons.length > 0) {
+          console.log(`[addon-manage] Found ${anonymousAddons.length} anonymous addons, copying to user ${userId}...`);
+          
+          // Copy addons to new user
+          const newAddons = anonymousAddons.map(addon => ({
+            user_id: userId,
+            addon_id: addon.addon_id,
+            name: addon.name,
+            version: addon.version,
+            url: addon.url,
+            icon: addon.icon,
+            enabled: true,
+            order_position: addon.order_position,
+            last_health: addon.last_health,
+            id_prefixes: addon.id_prefixes,
+          }));
+          
+          const { data: insertedAddons, error: insertError } = await supabase
+            .from("addons")
+            .insert(newAddons)
+            .select("*");
+          
+          if (!insertError && insertedAddons) {
+            console.log(`[addon-manage] Successfully copied ${insertedAddons.length} addons to new user`);
+            return new Response(
+              JSON.stringify({ addons: insertedAddons }),
+              { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        }
+      }
+      
       return new Response(
         JSON.stringify({ addons: addons || [] }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
