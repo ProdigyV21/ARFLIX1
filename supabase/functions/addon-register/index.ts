@@ -220,29 +220,9 @@ Deno.serve(async (req: Request) => {
         userId = newUser.id;
       }
     } else {
-      // Anonymous user - create or use anonymous user record
+      // Anonymous user - use fixed UUID (should already exist in database)
       const ANONYMOUS_USER_ID = "00000000-0000-0000-0000-000000000000";
-      
-      const { data: anonUser } = await supabase
-        .from("users")
-        .select("id")
-        .eq("id", ANONYMOUS_USER_ID)
-        .maybeSingle();
-      
-      if (!anonUser) {
-        const { data: newAnon, error: createError } = await supabase
-          .from("users")
-          .insert({ id: ANONYMOUS_USER_ID, auth_id: null })
-          .select("id")
-          .single();
-        
-        if (createError || !newAnon) {
-          throw new Error("Failed to create anonymous user");
-        }
-        userId = newAnon.id;
-      } else {
-        userId = anonUser.id;
-      }
+      userId = ANONYMOUS_USER_ID;
     }
     
     const { url } = await req.json();
