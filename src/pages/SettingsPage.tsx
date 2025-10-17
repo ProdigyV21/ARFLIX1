@@ -339,6 +339,25 @@ export function SettingsPage() {
                 <strong className="text-white">Recommended:</strong> Use Torrentio for streaming content.
                 Torrentio is a popular, reliable Stremio add-on that works well with ArFlix.
               </p>
+              
+              <div className="bg-white/5 rounded-lg p-4 mb-4 space-y-3">
+                <div>
+                  <p className="text-white font-medium mb-1">✨ With Debrid Service (Recommended)</p>
+                  <p className="text-sm text-muted-foreground">
+                    For the best experience, configure Torrentio with a debrid service like Real-Debrid, Torbox, or AllDebrid.
+                    This provides instant, high-quality streams.
+                  </p>
+                </div>
+                
+                <div>
+                  <p className="text-white font-medium mb-1">🌐 Without Debrid (Free)</p>
+                  <p className="text-sm text-muted-foreground">
+                    You can also use Torrentio without a debrid service. It will return torrent magnet links that work
+                    with torrent streaming apps or WebTorrent-compatible players.
+                  </p>
+                </div>
+              </div>
+              
               <p className="text-muted-foreground leading-relaxed mb-4">
                 <strong className="text-white">Tip:</strong> Use only sources and services that you are legally
                 allowed to access in your jurisdiction.
