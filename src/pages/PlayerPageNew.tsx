@@ -112,6 +112,14 @@ export function PlayerPageNew({
     console.log('[PlayerPage] Video element:', video);
     console.log('[PlayerPage] Video src before attach:', video.src);
 
+    // Check if this is a magnet link (non-debrid Torrentio)
+    if (stream.url.startsWith('magnet:')) {
+      console.log('[PlayerPage] Detected magnet link (non-debrid stream)');
+      setError('🧲 This is a magnet link. To play magnet links directly, you need:\n\n1. A debrid service (Real-Debrid, Torbox, or AllDebrid) configured in Torrentio, OR\n2. A torrent client that supports streaming (WebTorrent, Stremio, etc.)\n\nPlease configure Torrentio with a debrid service for instant HTTP streaming.');
+      setLoading(false);
+      return;
+    }
+
     // Check if this is a Torrentio "downloading" placeholder
     if (stream.url.includes('torrentio.strem.fun') && stream.url.includes('/videos/downloading')) {
       console.log('[PlayerPage] Torrentio is caching torrent to Real-Debrid...');
